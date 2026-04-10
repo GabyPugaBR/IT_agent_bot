@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 import anyio
@@ -8,9 +9,22 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PYTHON_PATH = PROJECT_ROOT / ".venv" / "bin" / "python"
+DEFAULT_VENV_PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"
+PYTHON_PATH = (
+    Path(os.environ["MCP_PYTHON_PATH"])
+    if os.environ.get("MCP_PYTHON_PATH")
+    else DEFAULT_VENV_PYTHON
+)
 SERVER_PATH = PROJECT_ROOT / "mcp" / "support_server.py"
 NULL_DEVICE = open(os.devnull, "w", encoding="utf-8")
+
+
+def _resolve_python_command() -> str:
+    if PYTHON_PATH.exists():
+        return str(PYTHON_PATH)
+
+    # In Docker and many hosted environments there is no project-level .venv.
+    return sys.executable
 
 
 def _extract_result_payload(result) -> dict:
@@ -43,7 +57,7 @@ def _extract_result_payload(result) -> dict:
 
 async def _call_tool_async(tool_name: str, arguments: dict) -> dict:
     server_parameters = StdioServerParameters(
-        command=str(PYTHON_PATH),
+        command=_resolve_python_command(),
         args=[str(SERVER_PATH)],
         cwd=str(PROJECT_ROOT),
     )
