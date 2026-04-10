@@ -1,0 +1,98 @@
+[
+  {
+    "slot_id": "slot-001",
+    "starts_at": "2026-04-13T09:00:00",
+    "location": "IT Help Desk",
+    "status": "booked",
+    "booked_for": "student12",
+    "issue_summary": "Book appointment slot-001 for my IT issue"
+  },
+  {
+    "slot_id": "slot-002",
+    "starts_at": "2026-04-13T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-003",
+    "starts_at": "2026-04-13T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-004",
+    "starts_at": "2026-04-14T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-005",
+    "starts_at": "2026-04-14T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-006",
+    "starts_at": "2026-04-14T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-007",
+    "starts_at": "2026-04-15T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-008",
+    "starts_at": "2026-04-15T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-009",
+    "starts_at": "2026-04-15T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-010",
+    "starts_at": "2026-04-16T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-011",
+    "starts_at": "2026-04-16T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-012",
+    "starts_at": "2026-04-16T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  }
+]

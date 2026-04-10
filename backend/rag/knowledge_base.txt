@@ -1,0 +1,53 @@
+Password Reset Instructions
+Constellations School uses Google Workspace for student and staff accounts.
+To reset a password, go to accounts.google.com, choose "Forgot password," complete the verification steps, and create a new password.
+Students should use a strong password with at least 12 characters.
+Staff passwords should include a mix of upper and lowercase letters, numbers, and symbols.
+
+Account Lockout Policy
+If a user enters the wrong password too many times, the account may be temporarily locked.
+Students should wait 15 minutes before trying again.
+Staff should contact IT immediately if they are locked out before a class period or school event.
+If the account remains locked after 15 minutes, IT support should manually unlock it.
+
+Wi-Fi Troubleshooting
+If school Wi-Fi is not working, first confirm whether other students or staff are also affected.
+Restart the device, forget the school network, and reconnect using the correct credentials.
+If the issue only happens in one classroom or hallway, report the location to IT because it may be an access point issue.
+If the issue affects multiple users across campus, escalate it as a network outage.
+
+Chromebook Troubleshooting
+If a Chromebook is frozen, hold the refresh key and tap the power button to restart it.
+If the battery will not charge, test the charger in another outlet and inspect the charging port for damage.
+If a student cannot sign in after a restart, verify that the account is not locked and that the device has internet access.
+Physical damage, repeated hardware failure, or charging problems should be escalated to the hardware support queue.
+
+Multi-Factor Authentication Support
+Staff members may be required to use multi-factor authentication for district systems.
+If MFA codes are not being received, first verify that the user has cellular service or access to the authenticator app.
+If the user changed phones, IT may need to reset the MFA enrollment.
+Never bypass MFA requirements without approval from school IT leadership.
+
+Phishing and Security Guidance
+Users should never share passwords by email, text message, or chat.
+If a message looks suspicious, do not click links or open attachments.
+Forward phishing attempts to the IT security inbox and report whether any link was clicked.
+If credentials may have been exposed, reset the password immediately and escalate the case to IT.
+
+Software Installation Policy
+Students may only install approved classroom software.
+Staff should submit requests for new software if it will be used for instruction, operations, or student services.
+Software requests should include the tool name, educational purpose, device type, and deadline.
+Unsupported or unapproved software should be escalated for review.
+
+Support Hours and Escalation
+Constellations School IT support hours are Monday through Friday from 7:00 AM to 4:30 PM.
+Urgent classroom-impacting issues during school hours should be escalated immediately.
+Non-urgent requests can be handled through the support queue.
+Issues involving safety, security, or campus-wide outages always require escalation to a human technician.
+
+Ticket Triage Rules
+Password resets and known knowledge-base questions can be handled automatically when the request is clear.
+Requests missing a username, device type, or location should prompt the user for more detail.
+Recurring issues, hardware failures, or policy exceptions should create a ticket for human follow-up.
+When escalating, include the user role, issue summary, urgency, and any troubleshooting steps already attempted.

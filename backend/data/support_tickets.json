@@ -1,0 +1,23 @@
+[
+  {
+    "ticket_id": "IT-0001",
+    "username": "unknown123",
+    "issue_summary": "Unknown user password reset",
+    "urgency": "high",
+    "status": "open"
+  },
+  {
+    "ticket_id": "IT-0002",
+    "username": "mysteryuser",
+    "issue_summary": "Password reset requested for unknown user.",
+    "urgency": "normal",
+    "status": "open"
+  },
+  {
+    "ticket_id": "IT-0003",
+    "username": null,
+    "issue_summary": "My laptop issue needs human help",
+    "urgency": "normal",
+    "status": "open"
+  }
+]

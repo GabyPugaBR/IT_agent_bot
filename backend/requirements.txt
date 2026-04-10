@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+langgraph
+langgraph-checkpoint-sqlite
+openai
+faiss-cpu
+numpy
+python-dotenv
+pydantic
+mcp
+pytest
+pytest-asyncio
+httpx   
+anyio
