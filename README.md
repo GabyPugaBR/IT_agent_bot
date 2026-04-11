@@ -1,150 +1,122 @@
-# Multi-Agent AI IT Support System
+# Constellations IT Support
 
-## Overview
-This project is a full-stack, multi-agent AI system designed to provide IT support for a K–12 school environment.
+Multi-agent AI capstone project for K-12 IT support. This project simulates a school support system that can answer knowledge questions, perform password reset workflows, offer human-support appointments, and collect software or hardware requests.
 
-It simulates real-world enterprise solutions by combining:
-- Retrieval-Augmented Generation (RAG)
-- Workflow automation
-- Multi-agent orchestration
-- Tool integration via MCP concepts
+## What This Project Demonstrates
+- Multi-agent orchestration with LangGraph
+- Retrieval-augmented generation with OpenAI embeddings and FAISS
+- Workflow automation through MCP
+- Persistent session memory
+- A polished school website UI with an embedded support chatbot
+- Dockerized frontend and backend services
 
----
+## Current Agent Roles
+- Intake Agent: routes the user request
+- Knowledge Agent: answers using the school knowledge base
+- Workflow Agent: performs automations like password reset
+- Escalation Agent: handles appointments, unsupported issues, and request submission
 
-## Problem
-Constellations School operates with a small IT team supporting a large user base of students, staff, and parents.
+## Prerequisites
+- Python 3.11+
+- Node.js 20+
+- Docker Desktop
+- An OpenAI API key
 
-Challenges:
-- High volume of repetitive requests
-- Slow response times
-- Manual ticket triaging
+## Required Environment Variables
+### Backend
+Copy `backend/.env.example` to `backend/.env` and provide:
 
----
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_CHAT_MODEL=gpt-4.1-mini
+```
 
-## Solution
-A multi-agent AI system that can:
-- Answer IT questions using a knowledge base (RAG)
-- Reset passwords via automated workflows (simulated)
-- Route complex issues to human support
+### Frontend
+Copy `frontend/.env.example` to `frontend/.env` if you need a custom backend URL:
 
----
+```env
+REACT_APP_API_URL=http://127.0.0.1:8000
+```
 
-## System Architecture
+## Quick Start
+### Option 1: Docker
+From the project root:
 
-Agents:
-- Intake Agent → classifies requests
-- Knowledge Agent → retrieves answers
-- Workflow Agent → executes actions
-- Escalation Agent → handles edge cases
+```bash
+docker compose up --build
+```
 
----
+Open:
+- Frontend: `http://localhost:3000`
+- Backend docs: `http://localhost:8000/docs`
 
-## Tech Stack
-
+### Option 2: Run locally without Docker
 Backend:
-- Python
-- LangGraph (multi-agent orchestration)
-- FAISS / Vector DB (RAG)
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
 Frontend:
-- React (chat-based UI)
 
-Other:
-- Docker (containerization)
-- MCP (conceptual tool integration layer)
+```bash
+cd frontend
+npm install
+npm start
+```
 
----
+## Replication Checklist
+For another student or grader to run this project successfully, they need:
+- the repository code
+- a valid `backend/.env` with their own OpenAI API key
+- Docker Desktop or local Python/Node installed
 
-## Features
+They do **not** need:
+- your personal `.venv`
+- your local `__pycache__`
+- your private API key
 
-- Chat-based IT support assistant
-- Password reset simulation
-- Knowledge retrieval with embeddings
-- Multi-agent decision flow
-- Escalation handling
+## Repository Structure
+```text
+backend/
+  agents/
+  data/
+  graph/
+  mcp/
+  memory/
+  rag/
+  schemas/
+  tools/
+  main.py
+frontend/
+  src/
+docker-compose.yml
+docs/
+  architecture.md
+  capstone-rubric-mapping.md
+  demo-script.md
+```
 
----
+## Architecture
+See [docs/architecture.md](docs/architecture.md).
 
-## Example Use Cases
+## Rubric Alignment
+See [docs/capstone-rubric-mapping.md](docs/capstone-rubric-mapping.md).
 
-1. “How do I reset my password?” → AI answers (RAG)
-2. “Reset my password” → Workflow agent executes action
-3. Complex issue → Escalation agent routes to human
+## Demo Guidance
+See [docs/demo-script.md](docs/demo-script.md).
 
----
+## Technical Notes
+- The project currently uses OpenAI for both embeddings and grounded response generation.
+- Password reset, ticketing, and appointment scheduling are simulated through MCP-backed tools.
+- Persistent local files are acceptable for the capstone demo, but a more production-ready version would move mutable state into a database.
 
-## Project Structure
-project/
-├── backend/
-│ ├── agents/
-│ ├── rag/
-│ ├── workflows/
-│ └── main.py
-├── frontend/
-│ └── react-app/
-├── docker-compose.yml
-└── README.md
-
-
----
-
-## Future Improvements
-
-- Real Google Workspace API integration
-- Authentication layer
-- Advanced ticketing system
-- Improved RAG accuracy
-
----
-
-## Demo
-
-(Insert screenshots or video here)
-
----
-
-## Author
-
-Team Static: 
-1. Gaby Rollins - MIS Student | Data Analytics | Agentic AI Systems
-2. 
-3. 
-4. 
-5. 
-6. 
-
-
-
-                ┌──────────────────────┐
-                │        USER          │
-                │   (React Chat UI)    │
-                └─────────┬────────────┘
-                          │
-                          ▼
-                ┌──────────────────────┐
-                │    Intake Agent      │
-                │ (Classify Request)   │
-                └─────────┬────────────┘
-                          │
-      ┌───────────────────┼───────────────────┐
-      ▼                   ▼                   ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Knowledge    │   │ Workflow     │   │ Escalation   │
-│ Agent (RAG)  │   │ Agent        │   │ Agent        │
-│              │   │              │   │              │
-│ Answers Qs   │   │ Resets PW    │   │ Creates Ticket│
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       │                  │                  │
-       ▼                  ▼                  ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Vector DB    │   │ MCP Server   │   │ Human / IT   │
-│ (RAG Data)   │   │ (Tools Layer)│   │ Support      │
-└──────────────┘   └──────────────┘   └──────────────┘
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │ Simulated DB    │
-                 │ Users/Passwords │
-                 └─────────────────┘
-**The Intake Agent routes requests to specialized agents, while MCP standardizes access to tools like password reset systems, and RAG ensures accurate knowledge retrieval.**
-
+## Suggested Next Improvements
+- Move mutable state from JSON/SQLite files into PostgreSQL
+- Add health endpoints and stronger observability
+- Improve deployment by separating frontend and backend environment configuration
+- Add more formal scenario-based tests and rubric metrics

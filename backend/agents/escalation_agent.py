@@ -23,6 +23,14 @@ APPOINTMENT_CONFIRMATION_PATTERNS = (
     "schedule appointment",
     "schedule it appointment",
 )
+DIRECT_APPOINTMENT_PATTERNS = (
+    "schedule it appointment",
+    "schedule appointment",
+    "book appointment",
+    "book it appointment",
+    "show available appointments",
+    "available appointments",
+)
 DECLINE_PATTERNS = (
     "no",
     "no thanks",
@@ -67,6 +75,20 @@ def escalation_agent(state):
                     "escalation_options": ["View appointment", "Ask another question"],
                 },
             }
+
+    if any(pattern in normalized_input for pattern in DIRECT_APPOINTMENT_PATTERNS):
+        slots = list_it_appointments_via_mcp(limit=4)
+        return {
+            **state,
+            "agent_used": "escalation",
+            "needs_escalation": True,
+            "response": "Here are the next available IT appointment options.",
+            "metadata": {
+                **state.get("metadata", {}),
+                "appointment_slots": slots.get("slots", []),
+                "escalation_options": ["Request software/hardware", "Ask another question", "Exit chat"],
+            },
+        }
 
     if (
         "would you like me to show available appointments" in last_assistant_message
