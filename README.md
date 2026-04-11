@@ -2,17 +2,17 @@
 
 Multi-agent AI capstone project for K-12 IT support. This project simulates a school support system that can answer knowledge questions, perform password reset workflows, offer human-support appointments, and collect software or hardware requests.
 
-## 🚀 Tech Stack
+## Tech Stack
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge)
-![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge)
+![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge&logo=LangGraph&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openaiI&logoColor=white)
 ![FAISS](https://img.shields.io/badge/FAISS-FF6F00?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-blue?style=for-the-badge)
-![RAG](https://img.shields.io/badge/RAG-Vector%20Search-green?style=for-the-badge)
+![MCP](https://img.shields.io/badge/MCP-blue?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-green?style=for-the-badge)
 ![Multi-Agent](https://img.shields.io/badge/Multi--Agent-AI-orange?style=for-the-badge)
 
 ## What This Project Demonstrates
