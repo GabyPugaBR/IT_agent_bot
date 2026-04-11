@@ -29,8 +29,13 @@ def load_store() -> dict:
         _STORE = build_index()
         return _STORE
 
-    index = faiss.read_index(str(INDEX_PATH))
-    metadata_payload = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    try:
+        index = faiss.read_index(str(INDEX_PATH))
+        metadata_payload = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    except (RuntimeError, ValueError, json.JSONDecodeError):
+        _STORE = build_index()
+        return _STORE
+
     if isinstance(metadata_payload, list):
         _STORE = build_index()
         return _STORE

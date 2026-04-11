@@ -1,4 +1,12 @@
+import json
+import os
 import re
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from agents.prompts import ESCALATION_AGENT_PROMPT, ESCALATION_DECISION_PROMPT
 
 from tools.mcp_client import (
     book_it_appointment_via_mcp,
@@ -39,11 +47,90 @@ DECLINE_PATTERNS = (
     "exit",
     "close",
 )
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+ESCALATION_MODEL = os.getenv("OPENAI_ROUTER_MODEL", os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
 
 
 def _is_request_submission(user_input: str) -> bool:
     normalized = user_input.lower()
     return all(field in normalized for field in REQUEST_SUBMISSION_FIELDS)
+
+
+def _decide_escalation_action(user_input: str, history: list[dict], slot_match: re.Match[str] | None) -> str:
+    normalized_input = user_input.lower()
+    last_assistant_message = next(
+        (message["content"].lower() for message in reversed(history) if message["role"] == "assistant"),
+        "",
+    )
+
+    if slot_match:
+        return "book_appointment"
+    if any(pattern in normalized_input for pattern in DIRECT_APPOINTMENT_PATTERNS):
+        return "show_appointments"
+    if (
+        "would you like me to show available it appointments" in last_assistant_message
+        and any(pattern in normalized_input for pattern in APPOINTMENT_CONFIRMATION_PATTERNS)
+    ):
+        return "show_appointments"
+    if (
+        "would you like me to show available it appointments" in last_assistant_message
+        and any(pattern in normalized_input for pattern in DECLINE_PATTERNS)
+    ):
+        return "acknowledge_decline"
+    if any(trigger in normalized_input for trigger in REQUEST_TRIGGER_PATTERNS):
+        return "show_request_form"
+
+    heuristic_action = "offer_appointments"
+    if client is None:
+        return heuristic_action
+
+    recent_history = history[-6:]
+    transcript = "\n".join(
+        f"{message['role']}: {message['content']}"
+        for message in recent_history
+    ) or "No previous conversation."
+
+    try:
+        response = client.responses.create(
+            model=ESCALATION_MODEL,
+            text={"format": {"type": "json_schema", "name": "escalation_decision", "schema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "show_appointments",
+                            "offer_appointments",
+                            "show_request_form",
+                            "acknowledge_decline",
+                            "book_appointment",
+                        ],
+                    }
+                },
+                "required": ["action"],
+                "additionalProperties": False,
+            }}},
+            input=[
+                {
+                    "role": "system",
+                    "content": f"{ESCALATION_AGENT_PROMPT}\n\n{ESCALATION_DECISION_PROMPT}",
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Recent conversation:\n{transcript}\n\n"
+                        f"Current user message:\n{user_input}\n\n"
+                        f"Heuristic suggestion: {heuristic_action}"
+                    ),
+                },
+            ],
+        )
+        payload = json.loads(response.output_text)
+        return payload.get("action", heuristic_action)
+    except Exception:
+        return heuristic_action
 
 
 def escalation_agent(state):
@@ -52,12 +139,9 @@ def escalation_agent(state):
     username = state.get("username")
     history = state.get("conversation_history", [])
     slot_match = SLOT_PATTERN.search(user_input)
-    last_assistant_message = next(
-        (message["content"].lower() for message in reversed(history) if message["role"] == "assistant"),
-        "",
-    )
+    action = _decide_escalation_action(user_input, history, slot_match)
 
-    if slot_match:
+    if action == "book_appointment" and slot_match:
         booking = book_it_appointment_via_mcp(
             slot_id=slot_match.group(0).lower(),
             booked_for=username,
@@ -76,7 +160,7 @@ def escalation_agent(state):
                 },
             }
 
-    if any(pattern in normalized_input for pattern in DIRECT_APPOINTMENT_PATTERNS):
+    if action == "show_appointments":
         slots = list_it_appointments_via_mcp(limit=4)
         return {
             **state,
@@ -90,27 +174,7 @@ def escalation_agent(state):
             },
         }
 
-    if (
-        "would you like me to show available appointments" in last_assistant_message
-        and any(pattern in normalized_input for pattern in APPOINTMENT_CONFIRMATION_PATTERNS)
-    ):
-        slots = list_it_appointments_via_mcp(limit=4)
-        return {
-            **state,
-            "agent_used": "escalation",
-            "needs_escalation": True,
-            "response": "Here are the next available IT appointment options.",
-            "metadata": {
-                **state.get("metadata", {}),
-                "appointment_slots": slots.get("slots", []),
-                "escalation_options": ["Request software/hardware", "Ask another question", "Exit chat"],
-            },
-        }
-
-    if (
-        "would you like me to show available appointments" in last_assistant_message
-        and any(pattern in normalized_input for pattern in DECLINE_PATTERNS)
-    ):
+    if action == "acknowledge_decline":
         return {
             **state,
             "agent_used": "escalation",
@@ -122,7 +186,7 @@ def escalation_agent(state):
             },
         }
 
-    if any(trigger in normalized_input for trigger in REQUEST_TRIGGER_PATTERNS) and not _is_request_submission(user_input):
+    if action == "show_request_form" and not _is_request_submission(user_input):
         return {
             **state,
             "agent_used": "escalation",
