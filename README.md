@@ -2,6 +2,8 @@
 
 Multi-agent AI capstone project for K-12 IT support. This project simulates a school support system that can answer knowledge questions, perform password reset workflows, offer human-support appointments, and collect software or hardware requests.
 
+[Python logo] [React logo] [Docker logo]
+
 ## What This Project Demonstrates
 - Multi-agent orchestration with LangGraph
 - Retrieval-augmented generation with OpenAI embeddings and FAISS
