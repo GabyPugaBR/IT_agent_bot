@@ -52,11 +52,11 @@ def knowledge_agent(state):
 
     response = result["answer"]
     if _is_password_help(user_input):
-        metadata["follow_up_actions"] = ["Reset password for student12", "Schedule IT appointment"]
+        metadata["follow_up_actions"] = ["Reset my password", "Schedule IT appointment"]
         response = (
             f"{response}\n\n"
-            "If you'd like, I can reset the password for you next. "
-            "Reply with something like 'Reset password for student12'."
+            "If you would like the system to perform the reset next, select 'Reset my password' or reply with "
+            "'Reset password for student12'."
         )
 
     return {

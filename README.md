@@ -2,6 +2,19 @@
 
 Constellations IT Support is a multi-agent AI support application designed for a K-12 school environment. The project demonstrates how retrieval-augmented generation, workflow automation, MCP-based tool access, and human-support escalation can be combined in a single support experience.
 
+## Tech Stack
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge)
+![FAISS](https://img.shields.io/badge/FAISS-FF6F00?style=for-the-badge)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-blue?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-green?style=for-the-badge)
+![Multi-Agent](https://img.shields.io/badge/Multi--Agent-AI-orange?style=for-the-badge)
+
 ## Project Summary
 The system was developed as a capstone prototype for school IT support. It addresses common support scenarios such as password reset, Wi-Fi troubleshooting, Chromebook assistance, appointment scheduling, and software or hardware request intake. The implementation combines a school-themed React interface with a Python backend built on FastAPI and LangGraph.
 

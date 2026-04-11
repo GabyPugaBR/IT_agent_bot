@@ -1,0 +1,37 @@
+[
+  {
+    "id": "CON-101",
+    "title": "Password Reset and Account Recovery",
+    "space": "IT Support",
+    "url": "https://confluence.constellations.local/it-support/password-reset",
+    "content": "Students, teachers, staff, and administrators can reset school passwords through the Constellations IT support service. Password reset requests should confirm the target username before the reset is executed. Temporary passwords must be changed at the next sign-in. If the user does not know the full username, the support agent should ask for it before continuing."
+  },
+  {
+    "id": "CON-102",
+    "title": "Wi-Fi Troubleshooting for Classrooms and Devices",
+    "space": "IT Support",
+    "url": "https://confluence.constellations.local/it-support/wifi-troubleshooting",
+    "content": "If Wi-Fi is not working in a classroom, first confirm whether only one device is affected or the whole room is offline. Check that Wi-Fi is enabled, verify the student or staff member is using the school wireless network, and restart the device if needed. If multiple devices in the same room cannot connect, escalate to IT because the issue may involve the access point or network infrastructure."
+  },
+  {
+    "id": "CON-103",
+    "title": "Chromebook and Device Support",
+    "space": "IT Support",
+    "url": "https://confluence.constellations.local/it-support/device-support",
+    "content": "For Chromebook support, ask the user to restart the device, verify the charger is working, and reconnect to Wi-Fi. If the Chromebook is physically damaged, cannot power on, or repeatedly fails to sign in, direct the case to human IT support. Device-related requests that require replacement or new equipment should be submitted as hardware requests."
+  },
+  {
+    "id": "CON-104",
+    "title": "Security, MFA, and Phishing Guidance",
+    "space": "IT Support",
+    "url": "https://confluence.constellations.local/it-support/security-guidance",
+    "content": "Users should never share passwords by email or chat. If multi-factor authentication is required, ensure the user has access to their registered device before proceeding. Suspected phishing emails should be reported to IT instead of opened. When security context is incomplete, the agent should provide only approved guidance and avoid guessing."
+  },
+  {
+    "id": "CON-105",
+    "title": "When to Escalate to Human IT Support",
+    "space": "IT Support",
+    "url": "https://confluence.constellations.local/it-support/escalation-guidelines",
+    "content": "The support agent should escalate when the knowledge source does not provide a reliable answer, when supported automation is unavailable, or when the user needs hands-on help. In those cases, the preferred next step is to offer available IT appointment times. Software and hardware requests should be captured through a request workflow and acknowledged with a seventy-two hour response expectation."
+  }
+]

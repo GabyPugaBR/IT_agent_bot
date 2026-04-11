@@ -108,3 +108,7 @@ def book_it_appointment_via_mcp(slot_id: str, booked_for: str | None, issue_summ
             "issue_summary": issue_summary,
         },
     )
+
+
+def fetch_confluence_pages_via_mcp() -> dict:
+    return call_tool("fetch_confluence_pages", {})

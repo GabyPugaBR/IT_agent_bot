@@ -7,8 +7,9 @@ import numpy as np
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from agents.prompts import KNOWLEDGE_AGENT_PROMPT
 from rag.embeddings import get_embedding
-from rag.ingest import INDEX_PATH, METADATA_PATH, build_index
+from rag.ingest import INDEX_PATH, METADATA_PATH, build_index, current_source_signature
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -29,7 +30,16 @@ def load_store() -> dict:
         return _STORE
 
     index = faiss.read_index(str(INDEX_PATH))
-    chunks = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    metadata_payload = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    if isinstance(metadata_payload, list):
+        _STORE = build_index()
+        return _STORE
+
+    if metadata_payload.get("source_signature") != current_source_signature():
+        _STORE = build_index()
+        return _STORE
+
+    chunks = metadata_payload.get("chunks", [])
     _STORE = {
         "index": index,
         "chunks": chunks,
@@ -71,11 +81,7 @@ def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> str:
         input=[
             {
                 "role": "system",
-                "content": (
-                    "You are an IT support assistant for Constellations School. "
-                    "Answer only with the provided context. "
-                    "If the context is not enough, say that the request should be escalated."
-                ),
+                "content": KNOWLEDGE_AGENT_PROMPT,
             },
             {
                 "role": "user",
