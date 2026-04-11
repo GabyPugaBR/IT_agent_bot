@@ -11,7 +11,9 @@ Multi-agent AI capstone project for K-12 IT support. This project simulates a sc
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge)
 ![FAISS](https://img.shields.io/badge/FAISS-FF6F00?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-
+![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-blue?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-Vector%20Search-green?style=for-the-badge)
+![Multi-Agent](https://img.shields.io/badge/Multi--Agent-AI-orange?style=for-the-badge)
 
 ## What This Project Demonstrates
 - Multi-agent orchestration with LangGraph
