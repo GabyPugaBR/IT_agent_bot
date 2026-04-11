@@ -14,7 +14,7 @@ METADATA_PATH = BASE_DIR / "knowledge_metadata.json"
 
 
 def current_source_signature() -> dict:
-    page_ids = [page_id.strip() for page_id in os.getenv("CONFLUENCE_PAGE_IDS", "").split(",") if page_id.strip()]
+    page_ids = [page_id.strip() for page_id in os.getenv("CONFLUENCE_PAGE_ID", "").split(",") if page_id.strip()]
     return {
         "base_url": os.getenv("CONFLUENCE_BASE_URL"),
         "page_ids": page_ids,

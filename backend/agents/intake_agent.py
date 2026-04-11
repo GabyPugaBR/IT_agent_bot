@@ -85,6 +85,16 @@ ESCALATION_KEYWORDS = {
     "request hardware",
 }
 
+ESCALATION_CONTINUATION_KEYWORDS = {
+    "yes",
+    "yes, show appointments",
+    "show appointments",
+    "no thanks",
+    "request software/hardware",
+    "ask another question",
+    "exit chat",
+}
+
 
 def _heuristic_intent(user_input: str, history: list[dict]) -> str:
     last_assistant_message = next(
@@ -109,9 +119,15 @@ def _heuristic_intent(user_input: str, history: list[dict]) -> str:
         )
         and any(keyword in user_input for keyword in WORKFLOW_CONTINUATION_KEYWORDS)
     )
+    escalation_continuation = (
+        "would you like me to show available it appointments" in last_assistant_message
+        and any(keyword in user_input for keyword in ESCALATION_CONTINUATION_KEYWORDS)
+    )
 
     if (current_is_workflow and not current_is_password_question) or workflow_continuation:
         return "workflow"
+    if escalation_continuation:
+        return "escalation"
     if current_is_escalation:
         return "escalation"
     if current_is_password_help or current_is_knowledge:

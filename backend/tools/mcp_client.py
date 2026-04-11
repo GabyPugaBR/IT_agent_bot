@@ -59,6 +59,7 @@ async def _call_tool_async(tool_name: str, arguments: dict) -> dict:
     server_parameters = StdioServerParameters(
         command=_resolve_python_command(),
         args=[str(SERVER_PATH)],
+        env=os.environ.copy(),
         cwd=str(PROJECT_ROOT),
     )
 

@@ -1,5 +1,6 @@
 import base64
 import html
+import json
 import os
 import re
 import sys
@@ -55,7 +56,7 @@ def _normalize_confluence_base_url(url: str | None) -> str | None:
 
 
 def _configured_page_ids() -> list[str]:
-    raw_page_ids = os.getenv("CONFLUENCE_PAGE_IDS", "")
+    raw_page_ids = os.getenv("CONFLUENCE_PAGE_ID", "")
     return [page_id.strip() for page_id in raw_page_ids.split(",") if page_id.strip()]
 
 
