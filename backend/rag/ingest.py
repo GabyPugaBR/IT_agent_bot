@@ -9,7 +9,6 @@ from rag.embeddings import get_embeddings
 from tools.mcp_client import fetch_confluence_pages_via_mcp
 
 BASE_DIR = Path(__file__).resolve().parent
-KNOWLEDGE_BASE_PATH = BASE_DIR / "knowledge_base.txt"
 INDEX_PATH = BASE_DIR / "knowledge.index"
 METADATA_PATH = BASE_DIR / "knowledge_metadata.json"
 
@@ -26,24 +25,10 @@ def load_source_documents() -> list[dict]:
     mcp_result = fetch_confluence_pages_via_mcp()
     if mcp_result.get("status") == "success" and mcp_result.get("pages"):
         return mcp_result["pages"]
-
-    source_text = KNOWLEDGE_BASE_PATH.read_text(encoding="utf-8").strip()
-    sections = [section.strip() for section in source_text.split("\n\n") if section.strip()]
-    documents = []
-    for idx, section in enumerate(sections):
-        lines = [line.strip() for line in section.splitlines() if line.strip()]
-        title = lines[0]
-        content = " ".join(lines[1:]) if len(lines) > 1 else lines[0]
-        documents.append(
-            {
-                "id": f"LOCAL-{idx}",
-                "title": title,
-                "space": "Local Knowledge Base",
-                "url": None,
-                "content": content,
-            }
-        )
-    return documents
+    message = mcp_result.get("message", "Confluence knowledge fetch failed.")
+    errors = mcp_result.get("errors", [])
+    detail = f" Details: {'; '.join(errors)}" if errors else ""
+    raise RuntimeError(f"{message}{detail}")
 
 
 def chunk_knowledge_base() -> list[dict]:
@@ -71,12 +56,14 @@ def chunk_knowledge_base() -> list[dict]:
 
 def build_index() -> dict:
     mcp_result = fetch_confluence_pages_via_mcp()
-    if mcp_result.get("status") == "success" and mcp_result.get("pages"):
-        source_name = mcp_result.get("source", "mcp_confluence")
-        documents = mcp_result["pages"]
-    else:
-        source_name = "local_fallback"
-        documents = load_source_documents()
+    if mcp_result.get("status") != "success" or not mcp_result.get("pages"):
+        message = mcp_result.get("message", "Confluence knowledge fetch failed.")
+        errors = mcp_result.get("errors", [])
+        detail = f" Details: {'; '.join(errors)}" if errors else ""
+        raise RuntimeError(f"{message}{detail}")
+
+    source_name = mcp_result.get("source", "confluence_cloud")
+    documents = mcp_result["pages"]
 
     chunks = []
     for idx, document in enumerate(documents):

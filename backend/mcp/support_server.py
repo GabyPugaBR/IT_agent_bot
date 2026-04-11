@@ -1,6 +1,5 @@
 import base64
 import html
-import json
 import os
 import re
 import sys
@@ -22,7 +21,6 @@ from tools.calendar import book_slot, ensure_calendar_db, list_available_slots
 from tools.user_db import create_ticket, ensure_user_db, find_user, get_password_policy
 
 mcp = FastMCP("constellations-support")
-CONFLUENCE_EXPORT_PATH = BACKEND_DIR / "data" / "confluence_pages.json"
 
 
 class _ConfluenceHTMLStripper(HTMLParser):
@@ -59,15 +57,6 @@ def _normalize_confluence_base_url(url: str | None) -> str | None:
 def _configured_page_ids() -> list[str]:
     raw_page_ids = os.getenv("CONFLUENCE_PAGE_IDS", "")
     return [page_id.strip() for page_id in raw_page_ids.split(",") if page_id.strip()]
-
-
-def _load_mock_confluence_pages() -> dict:
-    pages = json.loads(CONFLUENCE_EXPORT_PATH.read_text(encoding="utf-8"))
-    return {
-        "status": "success",
-        "source": "mock_confluence",
-        "pages": pages,
-    }
 
 
 def _strip_confluence_storage_html(storage_html: str) -> str:
@@ -170,7 +159,7 @@ def book_it_appointment(slot_id: str, booked_for: str | None, issue_summary: str
     return book_slot(slot_id=slot_id, booked_for=booked_for, issue_summary=issue_summary)
 
 
-@mcp.tool(description="Fetch mock Confluence knowledge pages for IT support grounding.")
+@mcp.tool(description="Fetch live Confluence knowledge pages for IT support grounding.")
 def fetch_confluence_pages() -> dict:
     email = os.getenv("ATLASSIAN_EMAIL")
     api_token = os.getenv("ATLASSIAN_API_TOKEN")
@@ -178,7 +167,14 @@ def fetch_confluence_pages() -> dict:
     page_ids = _configured_page_ids()
 
     if not all([email, api_token, base_url, page_ids]):
-        return _load_mock_confluence_pages()
+        return {
+            "status": "error",
+            "message": (
+                "Live Confluence configuration is incomplete. "
+                "Set ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN, CONFLUENCE_BASE_URL, and CONFLUENCE_PAGE_IDS."
+            ),
+            "pages": [],
+        }
 
     pages = []
     errors = []
@@ -193,10 +189,12 @@ def fetch_confluence_pages() -> dict:
             errors.append(f"Unexpected error for page {page_id}: {exc}")
 
     if not pages:
-        fallback = _load_mock_confluence_pages()
-        fallback["message"] = "Live Confluence fetch failed; using bundled fallback knowledge."
-        fallback["errors"] = errors
-        return fallback
+        return {
+            "status": "error",
+            "message": "Live Confluence fetch failed.",
+            "errors": errors,
+            "pages": [],
+        }
 
     return {
         "status": "success",

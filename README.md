@@ -11,7 +11,7 @@ Constellations IT Support is a multi-agent AI support application designed for a
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge)
 ![FAISS](https://img.shields.io/badge/FAISS-FF6F00?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![MCP](https://img.shields.io/badge/MCP-blue?style=for-the-badge)
+![FastMCP](https://img.shields.io/badge/FastMCP-1abc9c?style=for-the-badge)
 ![RAG](https://img.shields.io/badge/RAG-green?style=for-the-badge)
 ![Multi-Agent](https://img.shields.io/badge/Multi--Agent-AI-orange?style=for-the-badge)
 
