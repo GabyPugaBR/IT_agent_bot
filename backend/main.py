@@ -21,6 +21,14 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "it-agent-bot",
+    }
+
+
 @app.on_event("startup")
 def startup_event():
     initialize_memory()
