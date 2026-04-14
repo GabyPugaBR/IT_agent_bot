@@ -80,10 +80,13 @@ def _find_pending_reset(history: list[dict]) -> tuple[str | None, dict | None]:
     for message in reversed(history):
         if message["role"] != "assistant":
             continue
-        metadata = message.get("metadata", {}) or {}
-        pending_username = metadata.get("pending_reset_username")
+        # Messages are saved in main.py as {"intent": ..., "metadata": {...}}
+        # so pending_reset_username lives inside the nested "metadata" key
+        outer = message.get("metadata", {}) or {}
+        inner = outer.get("metadata", {}) or {}
+        pending_username = inner.get("pending_reset_username")
         if pending_username:
-            return pending_username, metadata.get("pending_user_lookup")
+            return pending_username, inner.get("pending_user_lookup")
     return None, None
 
 
