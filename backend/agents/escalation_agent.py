@@ -7,89 +7,46 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from agents.prompts import ESCALATION_AGENT_PROMPT, ESCALATION_DECISION_PROMPT
-
 from tools.mcp_client import (
     book_it_appointment_via_mcp,
     create_support_ticket_via_mcp,
     list_it_appointments_via_mcp,
 )
 
-
+# Kept for deterministic slot-ID extraction — data format, not semantic reasoning
 SLOT_PATTERN = re.compile(r"\bslot-\d{3}\b", re.IGNORECASE)
-REQUEST_TRIGGER_PATTERNS = (
-    "request",
-    "request software",
-    "request hardware",
-    "software request",
-    "hardware request",
-)
-REQUEST_SUBMISSION_FIELDS = ("request type:", "item:", "purpose:", "device type:", "deadline:")
-APPOINTMENT_CONFIRMATION_PATTERNS = (
-    "yes",
-    "yes, show appointments",
-    "show appointments",
-    "schedule appointment",
-    "schedule it appointment",
-)
-DIRECT_APPOINTMENT_PATTERNS = (
-    "schedule it appointment",
-    "schedule appointment",
-    "book appointment",
-    "book it appointment",
-    "show available appointments",
-    "available appointments",
-)
-DECLINE_PATTERNS = (
-    "no",
-    "no thanks",
-    "something else",
-    "ask another question",
-    "exit",
-    "close",
-)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 ESCALATION_MODEL = os.getenv("OPENAI_ROUTER_MODEL", os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
 
 
-def _is_request_submission(user_input: str) -> bool:
-    normalized = user_input.lower()
-    return all(field in normalized for field in REQUEST_SUBMISSION_FIELDS)
-
-
-def _decide_escalation_action(user_input: str, history: list[dict], slot_match: re.Match[str] | None) -> str:
-    normalized_input = user_input.lower()
-    last_assistant_message = next(
-        (message["content"].lower() for message in reversed(history) if message["role"] == "assistant"),
-        "",
-    )
-
+def _decide_escalation_action(user_input: str, history: list[dict], slot_match) -> dict:
+    """
+    Returns a dict with: action, confidence, reasoning, is_request_submission.
+    Slot-ID match is deterministic; everything else goes to the LLM.
+    """
     if slot_match:
-        return "book_appointment"
-    if any(pattern in normalized_input for pattern in DIRECT_APPOINTMENT_PATTERNS):
-        return "show_appointments"
-    if (
-        "would you like me to show available it appointments" in last_assistant_message
-        and any(pattern in normalized_input for pattern in APPOINTMENT_CONFIRMATION_PATTERNS)
-    ):
-        return "show_appointments"
-    if (
-        "would you like me to show available it appointments" in last_assistant_message
-        and any(pattern in normalized_input for pattern in DECLINE_PATTERNS)
-    ):
-        return "acknowledge_decline"
-    if any(trigger in normalized_input for trigger in REQUEST_TRIGGER_PATTERNS):
-        return "show_request_form"
+        return {
+            "action": "book_appointment",
+            "confidence": 1.0,
+            "reasoning": "Slot ID detected — booking deterministically.",
+            "is_request_submission": False,
+        }
 
-    heuristic_action = "offer_appointments"
     if client is None:
-        return heuristic_action
+        return {
+            "action": "offer_appointments",
+            "confidence": 0.5,
+            "reasoning": "No LLM client — defaulting to offer appointments.",
+            "is_request_submission": False,
+        }
 
     recent_history = history[-6:]
     transcript = "\n".join(
-        f"{message['role']}: {message['content']}"
-        for message in recent_history
+        f"{msg['role']}: {msg['content']}"
+        for msg in recent_history
     ) or "No previous conversation."
 
     try:
@@ -104,12 +61,16 @@ def _decide_escalation_action(user_input: str, history: list[dict], slot_match: 
                             "show_appointments",
                             "offer_appointments",
                             "show_request_form",
+                            "submit_request",
                             "acknowledge_decline",
                             "book_appointment",
                         ],
-                    }
+                    },
+                    "confidence": {"type": "number"},
+                    "reasoning": {"type": "string"},
+                    "is_request_submission": {"type": "boolean"},
                 },
-                "required": ["action"],
+                "required": ["action", "confidence", "reasoning", "is_request_submission"],
                 "additionalProperties": False,
             }}},
             input=[
@@ -120,26 +81,38 @@ def _decide_escalation_action(user_input: str, history: list[dict], slot_match: 
                 {
                     "role": "user",
                     "content": (
-                        f"Recent conversation:\n{transcript}\n\n"
-                        f"Current user message:\n{user_input}\n\n"
-                        f"Heuristic suggestion: {heuristic_action}"
+                        f"Conversation so far:\n{transcript}\n\n"
+                        f"Current user message: {user_input}"
                     ),
                 },
             ],
         )
-        payload = json.loads(response.output_text)
-        return payload.get("action", heuristic_action)
+        return json.loads(response.output_text)
     except Exception:
-        return heuristic_action
+        return {
+            "action": "offer_appointments",
+            "confidence": 0.5,
+            "reasoning": "LLM error — defaulting to offer appointments.",
+            "is_request_submission": False,
+        }
 
 
 def escalation_agent(state):
     user_input = state["user_input"]
-    normalized_input = user_input.lower()
     username = state.get("username")
     history = state.get("conversation_history", [])
     slot_match = SLOT_PATTERN.search(user_input)
-    action = _decide_escalation_action(user_input, history, slot_match)
+
+    decision = _decide_escalation_action(user_input, history, slot_match)
+    action = decision["action"]
+    is_request_submission = decision.get("is_request_submission", False)
+
+    metadata = {
+        **state.get("metadata", {}),
+        "agent_step": action,
+        "agent_confidence": decision.get("confidence"),
+        "agent_reasoning": decision.get("reasoning"),
+    }
 
     if action == "book_appointment" and slot_match:
         booking = book_it_appointment_via_mcp(
@@ -154,7 +127,7 @@ def escalation_agent(state):
                 "needs_escalation": True,
                 "response": "Your IT support appointment has been scheduled.",
                 "metadata": {
-                    **state.get("metadata", {}),
+                    **metadata,
                     "appointment": booking.get("appointment"),
                     "escalation_options": ["View appointment", "Ask another question"],
                 },
@@ -166,9 +139,9 @@ def escalation_agent(state):
             **state,
             "agent_used": "escalation",
             "needs_escalation": True,
-            "response": "Here are the next available IT appointment options.",
+            "response": "Here are the next available IT appointment slots.",
             "metadata": {
-                **state.get("metadata", {}),
+                **metadata,
                 "appointment_slots": slots.get("slots", []),
                 "escalation_options": ["Request software/hardware", "Ask another question", "Exit chat"],
             },
@@ -179,32 +152,14 @@ def escalation_agent(state):
             **state,
             "agent_used": "escalation",
             "needs_escalation": True,
-            "response": "No problem. If you'd like, I can help with something else or you can close the chat.",
+            "response": "No problem at all. Is there anything else I can help you with, or feel free to close the chat.",
             "metadata": {
-                **state.get("metadata", {}),
+                **metadata,
                 "escalation_options": ["Request software/hardware", "Ask another question", "Exit chat"],
             },
         }
 
-    if action == "show_request_form" and not _is_request_submission(user_input):
-        return {
-            **state,
-            "agent_used": "escalation",
-            "needs_escalation": True,
-            "response": (
-                "I can help you submit a software or hardware request. "
-                "Please fill out the request form below."
-            ),
-            "metadata": {
-                **state.get("metadata", {}),
-                "software_request_form": {
-                    "title": "Software or Hardware Request",
-                    "request_types": ["Software", "Hardware"],
-                },
-            },
-        }
-
-    if _is_request_submission(user_input):
+    if action == "submit_request" and is_request_submission:
         ticket = create_support_ticket_via_mcp(
             username=username,
             issue_summary=user_input,
@@ -214,27 +169,45 @@ def escalation_agent(state):
             **state,
             "agent_used": "escalation",
             "needs_escalation": True,
-            "response": "Your request has been submitted. IT will get back to you within 72 hours.",
+            "response": "Your request has been submitted. The IT team will get back to you within 72 hours.",
             "metadata": {
-                **state.get("metadata", {}),
+                **metadata,
                 "ticket": ticket,
                 "escalation_options": ["Ask another question", "Exit chat"],
             },
         }
 
+    if action == "show_request_form":
+        return {
+            **state,
+            "agent_used": "escalation",
+            "needs_escalation": True,
+            "response": (
+                "I can help you submit a software or hardware request. "
+                "Please fill out the form below."
+            ),
+            "metadata": {
+                **metadata,
+                "software_request_form": {
+                    "title": "Software or Hardware Request",
+                    "request_types": ["Software", "Hardware"],
+                },
+            },
+        }
+
+    # Default: offer_appointments
     return {
         **state,
         "agent_used": "escalation",
         "needs_escalation": True,
         "response": (
-            "I can't help with that directly from the knowledge base or automated tools. "
-            "Would you like me to show available IT appointments?"
+            "I wasn't able to resolve that through the knowledge base or automated tools. "
+            "Would you like to schedule an IT appointment or submit a request?"
         ),
         "metadata": {
-            **state.get("metadata", {}),
+            **metadata,
             "escalation_options": [
                 "Yes, show appointments",
-                "No thanks",
                 "Request software/hardware",
                 "Ask another question",
                 "Exit chat",

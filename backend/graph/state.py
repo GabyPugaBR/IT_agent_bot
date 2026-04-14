@@ -14,3 +14,4 @@ class AgentState(TypedDict, total=False):
     username: Optional[str]
     conversation_history: List[dict[str, Any]]
     metadata: dict[str, Any]
+    reasoning_trace: dict[str, Any]

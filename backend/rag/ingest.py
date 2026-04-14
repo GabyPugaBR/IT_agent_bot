@@ -31,27 +31,63 @@ def load_source_documents() -> list[dict]:
     raise RuntimeError(f"{message}{detail}")
 
 
+def _chunk_page(content: str, title: str, page_id: str, space: str, url: str,
+                max_chars: int = 800, overlap: int = 100) -> list[dict]:
+    """
+    Split a page's content into overlapping paragraph-based chunks.
+    Falls back to a single chunk for short pages.
+    """
+    paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+    if not paragraphs:
+        paragraphs = [content.strip()]
+
+    chunks = []
+    current = ""
+    for para in paragraphs:
+        if len(current) + len(para) + 2 <= max_chars:
+            current = f"{current}\n\n{para}".strip() if current else para
+        else:
+            if current:
+                chunks.append(current)
+            # Start new chunk with overlap from end of previous
+            current = current[-overlap:].strip() + "\n\n" + para if current else para
+
+    if current:
+        chunks.append(current)
+
+    return [
+        {
+            "title": title,
+            "content": chunk,
+            "text": f"{title}\n{chunk}",
+            "page_id": page_id,
+            "space": space,
+            "url": url,
+        }
+        for chunk in chunks
+    ]
+
+
 def chunk_knowledge_base() -> list[dict]:
     documents = load_source_documents()
-    chunks = []
+    all_chunks = []
+    chunk_id = 0
 
-    for idx, document in enumerate(documents):
+    for document in documents:
         title = document["title"]
         content = document["content"].strip()
-        text = f"{title}\n{content}"
-        chunks.append(
-            {
-                "id": idx,
-                "title": title,
-                "content": content,
-                "text": text,
-                "page_id": document.get("id"),
-                "space": document.get("space"),
-                "url": document.get("url"),
-            }
+        page_chunks = _chunk_page(
+            content=content,
+            title=title,
+            page_id=document.get("id", ""),
+            space=document.get("space", ""),
+            url=document.get("url", ""),
         )
+        for chunk in page_chunks:
+            all_chunks.append({"id": chunk_id, **chunk})
+            chunk_id += 1
 
-    return chunks
+    return all_chunks
 
 
 def build_index() -> dict:
@@ -66,21 +102,20 @@ def build_index() -> dict:
     documents = mcp_result["pages"]
 
     chunks = []
-    for idx, document in enumerate(documents):
+    chunk_id = 0
+    for document in documents:
         title = document["title"]
         content = document["content"].strip()
-        text = f"{title}\n{content}"
-        chunks.append(
-            {
-                "id": idx,
-                "title": title,
-                "content": content,
-                "text": text,
-                "page_id": document.get("id"),
-                "space": document.get("space"),
-                "url": document.get("url"),
-            }
+        page_chunks = _chunk_page(
+            content=content,
+            title=title,
+            page_id=document.get("id", ""),
+            space=document.get("space", ""),
+            url=document.get("url", ""),
         )
+        for chunk in page_chunks:
+            chunks.append({"id": chunk_id, **chunk})
+            chunk_id += 1
 
     embeddings = np.array(get_embeddings([chunk["text"] for chunk in chunks]), dtype="float32")
     faiss.normalize_L2(embeddings)

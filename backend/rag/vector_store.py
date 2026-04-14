@@ -74,7 +74,14 @@ def retrieve(query: str, top_k: int = 3) -> list[dict]:
     return results
 
 
-def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> str:
+def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> dict:
+    """
+    Returns a structured dict with:
+      - answer: grounded response text
+      - answer_confidence: float 0.0-1.0 (LLM self-assessed)
+      - is_password_related: bool
+      - reasoning: one sentence about source coverage
+    """
     context_blocks = [
         f"Source: {doc['title']}\nContent: {doc['content']}"
         for doc in retrieved_docs
@@ -83,6 +90,17 @@ def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> str:
 
     response = client.responses.create(
         model=CHAT_MODEL,
+        text={"format": {"type": "json_schema", "name": "grounded_answer", "schema": {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string"},
+                "answer_confidence": {"type": "number"},
+                "is_password_related": {"type": "boolean"},
+                "reasoning": {"type": "string"},
+            },
+            "required": ["answer", "answer_confidence", "is_password_related", "reasoning"],
+            "additionalProperties": False,
+        }}},
         input=[
             {
                 "role": "system",
@@ -94,14 +112,26 @@ def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> str:
             },
         ],
     )
-    return response.output_text.strip()
+
+    try:
+        return json.loads(response.output_text)
+    except (json.JSONDecodeError, AttributeError):
+        return {
+            "answer": response.output_text.strip() if hasattr(response, "output_text") else "I could not generate an answer.",
+            "answer_confidence": 0.0,
+            "is_password_related": False,
+            "reasoning": "Failed to parse structured response.",
+        }
 
 
 def search(query: str, top_k: int = 3) -> dict:
     retrieved_docs = retrieve(query, top_k=top_k)
-    answer = generate_grounded_answer(query, retrieved_docs)
+    result = generate_grounded_answer(query, retrieved_docs)
     return {
-        "answer": answer,
+        "answer": result["answer"],
+        "answer_confidence": result.get("answer_confidence", 0.0),
+        "is_password_related": result.get("is_password_related", False),
+        "reasoning": result.get("reasoning", ""),
         "sources": [doc["title"] for doc in retrieved_docs],
         "documents": retrieved_docs,
     }

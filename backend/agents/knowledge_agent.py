@@ -1,49 +1,33 @@
 from rag.vector_store import search
-from tools.mcp_client import list_it_appointments_via_mcp
 
 
-PASSWORD_TOPICS = {
-    "password",
-    "reset",
-    "locked out",
-    "forgot password",
-    "forgot my password",
-}
-
-
-def _is_password_help(user_input: str) -> bool:
-    normalized = user_input.lower()
-    return any(topic in normalized for topic in PASSWORD_TOPICS)
+CONFIDENCE_THRESHOLD = 0.6
 
 
 def knowledge_agent(state):
     user_input = state["user_input"]
     result = search(user_input, top_k=3)
+
     documents = result["documents"]
-    top_score = documents[0]["score"] if documents else 0.0
+    answer_confidence = result.get("answer_confidence", 0.0)
+    is_password_related = result.get("is_password_related", False)
+    retrieval_scores = [doc["score"] for doc in documents]
+
     metadata = {
         **state.get("metadata", {}),
         "retrieved_documents": documents,
+        "retrieval_scores": retrieval_scores,
+        "answer_confidence": answer_confidence,
+        "answer_reasoning": result.get("reasoning", ""),
     }
 
-    if not documents or top_score < 0.25:
-        slots = list_it_appointments_via_mcp(limit=4)
-        metadata.update(
-            {
-                "appointment_slots": slots.get("slots", []),
-                "escalation_options": [
-                    "Schedule IT appointment",
-                    "Request software/hardware",
-                    "Ask another question",
-                ],
-            }
-        )
+    if not documents or answer_confidence < CONFIDENCE_THRESHOLD:
         return {
             **state,
             "agent_used": "knowledge",
             "response": (
-                "I could not find a reliable answer in the school knowledge base. "
-                "A human IT staff member is needed, and I can help you schedule an appointment or submit a request."
+                "I wasn't able to find a confident answer in the school knowledge base. "
+                "A human IT staff member would be best for this — I can help you schedule an appointment or submit a request."
             ),
             "retrieved_docs": result["sources"],
             "metadata": metadata,
@@ -51,12 +35,14 @@ def knowledge_agent(state):
         }
 
     response = result["answer"]
-    if _is_password_help(user_input):
-        metadata["follow_up_actions"] = ["Reset my password", "Schedule IT appointment"]
+
+    if is_password_related:
+        metadata["offer_password_reset"] = True
+        metadata["follow_up_actions"] = ["Yes, reset my password", "No, I just needed the info"]
         response = (
             f"{response}\n\n"
-            "If you would like the system to perform the reset next, select 'Reset my password' or reply with "
-            "'Reset password for student12'."
+            "Would you like me to perform the reset for you? Just say yes and provide your username, "
+            "or type something like 'Reset password for student12'."
         )
 
     return {

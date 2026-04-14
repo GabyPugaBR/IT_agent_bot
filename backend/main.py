@@ -8,7 +8,7 @@ from memory.store import (
     save_message,
     upsert_session_memory,
 )
-from schemas.chat import ChatRequest, ChatResponse
+from schemas.chat import ChatRequest, ChatResponse, ReasoningTrace
 
 app = FastAPI()
 
@@ -81,11 +81,24 @@ def chat(request: ChatRequest):
         result.get("agent_used"),
     )
 
+    result_metadata = result.get("metadata", {})
+    reasoning_trace = ReasoningTrace(
+        routing_intent=result.get("intent"),
+        routing_confidence=result_metadata.get("routing_confidence"),
+        routing_reasoning=result_metadata.get("routing_reasoning"),
+        agent_step=result_metadata.get("agent_step"),
+        agent_confidence=result_metadata.get("agent_confidence"),
+        agent_reasoning=result_metadata.get("agent_reasoning"),
+        answer_confidence=result_metadata.get("answer_confidence"),
+        retrieval_scores=result_metadata.get("retrieval_scores", []),
+    )
+
     return ChatResponse(
         response=result["response"],
         intent=result["intent"],
         agent_used=result["agent_used"],
         session_id=request.session_id,
         sources=result.get("retrieved_docs", []),
-        metadata=result.get("metadata", {}),
+        metadata=result_metadata,
+        reasoning_trace=reasoning_trace,
     )

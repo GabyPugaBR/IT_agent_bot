@@ -2,261 +2,206 @@
 
 ## System Summary
 
-Constellations IT Support is a multi-agent AI support system for school IT operations. The system accepts chat requests from a web frontend, sends them to a FastAPI backend, and routes each request through a LangGraph-based orchestration layer. The orchestration layer decides whether the user needs:
+Constellations IT Support is a multi-agent AI support system for school IT operations. The system accepts chat requests from a React frontend, routes them through a FastAPI backend, and orchestrates them through a LangGraph agent graph. Every request is classified by an LLM-powered Intake Agent and dispatched to one of four specialist agents:
 
-- knowledge support from the school IT knowledge base
-- an operational workflow such as a password reset
-- human-support escalation such as appointment scheduling or a software and hardware request
+- **Knowledge Agent** — retrieval-augmented answers from the school IT knowledge base
+- **Workflow Agent** — automated password reset execution with confirmation guardrails
+- **Escalation Agent** — human-support handoff via appointments and request submission
+- **Smalltalk Agent** — natural conversational engagement before steering back to IT support
 
-The architecture combines LLM-based routing, retrieval-augmented generation, simulated operational tools, and short-term conversation memory to deliver guided IT support for students, teachers, staff, and administrators.
+The system is designed around a core principle: **the LLM reasons first**. Python logic is reserved for deterministic data-format tasks (slot ID extraction, fast-path username matching). All semantic decisions — routing, step selection, confidence assessment, request classification — are made by the language model using structured output and chain-of-thought prompting.
 
 ## High-Level Flow
 
-1. A user sends a message from the React frontend.
-2. The frontend calls the FastAPI backend `POST /chat` endpoint.
-3. FastAPI loads recent session memory and builds an initial agent state.
-4. LangGraph sends the request first to the Intake Agent.
-5. The Intake Agent classifies the request as `knowledge`, `workflow`, or `escalation`.
-6. LangGraph routes the request to the selected specialist agent.
-7. The selected agent returns a user-facing response plus metadata such as sources, follow-up actions, appointment slots, or workflow results.
-8. FastAPI stores the conversation turn in SQLite memory and returns the final response to the frontend.
+1. User sends a message from the React frontend.
+2. Frontend calls the FastAPI backend `POST /chat` endpoint.
+3. FastAPI loads session memory from SQLite and builds the initial agent state.
+4. LangGraph dispatches the request to the **Intake Agent**.
+5. The Intake Agent uses the LLM to classify the request into one of four intents: `knowledge`, `workflow`, `escalation`, or `smalltalk`. It returns a confidence score and a one-sentence reasoning trace.
+6. LangGraph routes to the appropriate specialist agent.
+7. The specialist agent executes its logic — retrieving documents, running MCP tools, or generating a conversational reply — and returns a response with structured metadata.
+8. FastAPI appends a `reasoning_trace` (routing confidence, agent step, answer confidence, retrieval scores) to the response and saves the turn to SQLite memory.
+9. The frontend renders the response, structured cards, follow-up actions, appointment slots, or request forms as appropriate.
 
 ## Core Components
 
 ### 1. Frontend Layer
 
-- React single-page application
-- Chat-based interface for IT support conversations
-- Sends requests to the backend API
-- Displays bot responses, source information, and structured next actions
+- React single-page application embedded in a school-themed landing page
+- Chat modal with starter pills, structured response cards, appointment slot selection, and request forms
+- Sends `POST /chat` with message and session ID; renders `reasoning_trace` and `metadata` from response
+- Environment-configured backend URL via `REACT_APP_API_URL`
 
 ### 2. API Layer
 
 - FastAPI backend
 - Primary endpoint: `POST /chat`
 - Health endpoint: `GET /`
-- Handles session-aware chat requests and response formatting
-- Loads recent memory and passes the state into the agent graph
+- Builds agent state, invokes the LangGraph graph, assembles `ReasoningTrace`, and persists the turn to SQLite
 
 ### 3. Orchestration Layer
 
-- Built with LangGraph
-- Entry point is always the Intake Agent
-- Conditional routing sends traffic to one of three specialist agents:
-  - Knowledge Agent
-  - Workflow Agent
-  - Escalation Agent
-- Terminates after the selected specialist agent responds
+- Built with LangGraph `StateGraph`
+- Entry point: **Intake Agent** (always first)
+- Conditional routing to four specialist agents based on classified intent
+- Each agent terminates at `END` after producing its response
 
 ### 4. Memory Layer
 
-- SQLite-based conversation memory
-- Stores session-level context:
-  - session id
-  - username
-  - user role
-  - last intent
-  - last agent used
-- Stores recent message history with metadata
-- Helps agents interpret follow-up messages such as confirmations and continuation steps
+- SQLite-based session and conversation history storage
+- Stores session metadata: session ID, username, user role, last intent, last agent
+- Stores recent message history with per-turn metadata (pending usernames, workflow results, follow-up actions)
+- Last 6 messages retrieved per turn to provide conversational context to agents
 
 ### 5. Knowledge Layer
 
-- Retrieval-augmented generation pipeline
-- Fetches live Confluence pages through an MCP server
-- Builds embeddings with OpenAI `text-embedding-3-small`
-- Stores vectors in a FAISS index
-- Stores chunk metadata in `knowledge_metadata.json`
-- Retrieves top matching documents and generates grounded answers with OpenAI chat models
+- Retrieval-augmented generation pipeline over Confluence school IT documentation
+- Documents fetched live via MCP, cleaned, and split into overlapping paragraph-based chunks (800 char max, 100 char overlap) for precise retrieval
+- Embeddings generated with OpenAI `text-embedding-3-small` and stored in a FAISS flat inner-product index
+- At query time: embed question → search FAISS → retrieve top-k chunks → LLM generates structured answer with self-assessed confidence, password-relevance flag, and source reasoning
+- If LLM-assessed confidence < 0.6, agent escalates rather than guessing
 
 ### 6. Tool Layer
 
-- MCP client launches a local MCP support server over stdio
-- MCP tools provide operational capabilities:
-  - user lookup
-  - password reset
-  - ticket creation
-  - appointment listing
-  - appointment booking
-  - Confluence page retrieval
+- MCP client launches a local `FastMCP` support server over stdio
+- Agents call tools through the MCP client; the server wraps all operational logic
+- MCP tools available:
+  - `lookup_user` — look up a school user by username
+  - `reset_user_password` — generate and apply a role-appropriate temporary password
+  - `create_support_ticket` — log an escalation or failure as a support ticket
+  - `list_it_appointments` — retrieve available IT appointment slots
+  - `book_it_appointment` — book a selected slot
+  - `fetch_confluence_pages` — retrieve live school IT documentation
 
 ### 7. Data Layer
 
-- synthetic user directory in JSON
-- support ticket records in JSON
-- appointment calendar slots in JSON
-- SQLite memory database for session and conversation history
-- FAISS vector index and metadata files for RAG
+- Synthetic user directory in JSON (students, teachers, staff, admins with role-specific password policies)
+- Support ticket records in JSON
+- Appointment calendar slots in JSON
+- SQLite database for session and conversation memory
+- FAISS vector index and chunk metadata for RAG
 
 ## Agent Descriptions
 
-## Intake Agent
+### Intake Agent
 
-### Role
+**Role:** LLM-powered router. The first node in every conversation turn.
 
-The Intake Agent is the router and coordinator. It decides which specialist agent should handle the current user request.
+**How it works:**
+- Formats the last 6 conversation turns as a transcript
+- Calls the LLM with a chain-of-thought prompt and structured output schema
+- LLM returns: `intent`, `confidence` (0.0–1.0), `reasoning` (one sentence)
+- Returns are written to `metadata` as `routing_confidence` and `routing_reasoning`
+- Exception fallback: `escalation` (the safest default)
 
-### Responsibilities
+**What it handles:**
+- `knowledge` — informational questions, how-to, policy, troubleshooting
+- `workflow` — action requests (password reset) or workflow continuations (providing username, confirming reset)
+- `escalation` — appointments, software/hardware requests, unsupported issues
+- `smalltalk` — casual conversation, greetings, off-topic messages
 
-- analyze the current message
-- inspect recent conversation history
-- use heuristic rules for common IT intents
-- optionally use an OpenAI routing model for final intent classification
-- assign one of three intents:
-  - `knowledge`
-  - `workflow`
-  - `escalation`
+**Why it matters:** Every misroute cascades into a wrong-agent experience. The Intake Agent was previously driven by 120+ lines of keyword sets and heuristics. It now uses a single LLM call with few-shot examples and explicit continuation rules, making it robust to natural-language variation.
 
-### What It Handles
+### Knowledge Agent
 
-- informational questions such as Wi-Fi, MFA, phishing, internet, Chromebook, or troubleshooting topics
-- explicit action requests such as resetting a password
-- escalation cases such as appointments, software requests, or unsupported issues
+**Role:** Retrieval-augmented question answering grounded in school IT documentation.
 
-### Why It Matters
+**How it works:**
+- Embeds the user query and searches the FAISS index for top-k matching chunks
+- Sends retrieved chunks to the LLM with a structured output prompt
+- LLM returns: `answer`, `answer_confidence`, `is_password_related`, `reasoning`
+- If `answer_confidence < 0.6` → escalates with a human-support offer
+- If `is_password_related: true` → appends an offer to execute the reset and sets `offer_password_reset` in metadata
 
-The Intake Agent prevents every request from being handled the same way. It acts as the intelligent traffic controller that sends users to the right support path.
+**Why it matters:** Keeps answers grounded in institutional documentation rather than free-form model generation. The LLM's self-assessed confidence replaces a fragile FAISS distance threshold.
 
-## Knowledge Agent
+### Workflow Agent
 
-### Role
+**Role:** Safe, confirmed execution of IT operations — currently password reset.
 
-The Knowledge Agent answers school IT support questions using retrieved knowledge-base content.
+**How it works:**
+- Attempts fast-path username extraction via regex; falls back to LLM extraction for natural-language variations ("teacher number 5", "admin-1")
+- Searches conversation history for a `pending_reset_username` from a prior turn
+- Calls the LLM to decide the next step: `ask_for_username`, `confirm_target_user`, `execute_reset`, or `escalate`
+- LLM returns: `action`, `confidence`, `reasoning`
+- Never executes a reset without a confirmed pending target
+- Calls MCP tools for user lookup, password reset, and ticket creation on failure
 
-### Responsibilities
+**Why it matters:** Password reset is a sensitive operation. The workflow is intentionally sequential with a mandatory confirmation step. The LLM handles the full range of affirmative language ("yep", "go for it", "sounds good") without a brittle whitelist.
 
-- query the FAISS vector store
-- retrieve top matching Confluence chunks
-- generate an answer grounded only in retrieved context
-- attach document sources and retrieved document metadata
-- detect low-confidence retrieval and hand off to human-support options
+### Escalation Agent
 
-### Behavior
+**Role:** Human-support handoff — appointment scheduling, software/hardware requests, and acknowledged declines.
 
-- If relevant documents are found with sufficient confidence, it returns a grounded answer.
-- If confidence is low or no useful documents are found, it offers escalation options such as IT appointments or request submission.
-- For password-help questions, it explains the policy or process first and can suggest the reset workflow as a next step.
+**How it works:**
+- If a slot ID (`slot-NNN`) is detected in the message, deterministically books that appointment (no LLM needed)
+- Otherwise calls the LLM to decide the action: `show_appointments`, `offer_appointments`, `show_request_form`, `submit_request`, `acknowledge_decline`, or `book_appointment`
+- LLM also returns `is_request_submission: true/false` — replacing a previous check that required all 5 rigid fields to be present in the user's message
+- Calls MCP tools for appointment listing, booking, and ticket creation
 
-### Why It Matters
+**Why it matters:** Users submitting requests in plain English ("I need Adobe for my video class") now have their submissions recognized and processed without needing to follow a rigid form format.
 
-The Knowledge Agent gives the system a trustworthy self-service layer and reduces unnecessary escalation by answering known support questions directly from school documentation.
+### Smalltalk Agent
 
-## Workflow Agent
+**Role:** Natural conversational engagement for off-topic messages.
 
-### Role
+**How it works:**
+- Responds warmly in 1–2 sentences using the LLM
+- Tracks `consecutive_smalltalk_turns` in metadata; after 2+ turns, the prompt instructs the LLM to redirect more clearly to IT support
+- Always ends with an invitation to ask about IT needs
 
-The Workflow Agent executes safe, structured IT operations, currently focused on password reset workflows.
+**Why it matters:** A support bot that abruptly rejects "good morning" feels broken. Brief natural engagement improves perceived quality without compromising the support focus.
 
-### Responsibilities
+## Reasoning Trace
 
-- detect or extract usernames from user input
-- inspect prior messages to find pending reset targets
-- decide the next workflow step:
-  - ask for username
-  - confirm target user
-  - execute reset
-  - escalate if unsafe
-- look up users through MCP tools
-- perform password resets through the MCP tool layer
-- create a support ticket if a user is not found or the reset service fails
+Every API response includes a `reasoning_trace` object:
 
-### Behavior
+```json
+{
+  "routing_intent": "knowledge",
+  "routing_confidence": 0.95,
+  "routing_reasoning": "User is asking for Wi-Fi connection instructions from the knowledge base.",
+  "agent_step": null,
+  "agent_confidence": null,
+  "agent_reasoning": null,
+  "answer_confidence": 0.87,
+  "retrieval_scores": [0.91, 0.78, 0.64]
+}
+```
 
-- If the request is incomplete, it asks for a full username.
-- If a username is present, it confirms the user before taking action.
-- If the user confirms, it executes the password reset.
-- If the target user does not exist or a tool fails, it escalates to human IT support by creating a support ticket.
-
-### Why It Matters
-
-The Workflow Agent turns the chatbot from an information system into an operational IT assistant while preserving safety through confirmation and structured decision logic.
-
-## Escalation Agent
-
-### Role
-
-The Escalation Agent handles cases that require human support or adjacent support workflows that are not solved by the knowledge base alone.
-
-### Responsibilities
-
-- decide whether to:
-  - offer appointments
-  - show appointment slots
-  - book an appointment
-  - show a software or hardware request form
-  - acknowledge a declined escalation
-- call MCP tools to list or book appointments
-- create support tickets for submitted requests
-- present human-support options in a calm, actionable way
-
-### Behavior
-
-- If the user needs live support, it offers appointment scheduling.
-- If the user asks for software or hardware, it displays a request workflow.
-- If the user submits a request, it creates a support ticket.
-- If the user chooses an appointment slot, it books the slot.
-
-### Why It Matters
-
-The Escalation Agent ensures that unresolved or unsupported issues still end in a useful next step rather than a dead end.
+This makes the system observable: every routing decision and answer confidence can be inspected, logged, or surfaced in a developer panel.
 
 ## RAG and Knowledge Architecture
 
-The knowledge subsystem is built as a retrieval-augmented generation pipeline:
-
-1. Confluence pages are fetched through the MCP support server.
-2. Page content is cleaned and transformed into text chunks.
-3. Chunks are embedded using OpenAI embeddings.
-4. Embeddings are stored in FAISS for semantic search.
-5. At query time, the user question is embedded and matched against the vector index.
-6. Retrieved chunks are passed to the Knowledge Agent prompt.
-7. The final answer is generated using only retrieved evidence.
-
-This design keeps answers grounded in institutional documentation rather than free-form model guesses.
+1. Confluence pages fetched through the MCP support server
+2. Page content cleaned and split into overlapping paragraph-level chunks (800 char, 100 char overlap)
+3. Chunks embedded with OpenAI `text-embedding-3-small`
+4. Embeddings stored in a FAISS flat inner-product index with L2 normalization
+5. At query time: embed question → FAISS search → top-k chunks returned with cosine similarity scores
+6. Retrieved chunks passed to Knowledge Agent LLM prompt
+7. LLM generates a structured answer with self-assessed confidence — no hallucination of facts not in context
 
 ## MCP Tool Architecture
 
-The MCP layer acts as the bridge between agents and support tools.
+The MCP layer decouples agent reasoning from operational tooling. Agents call named tools through a typed client; the MCP server owns the implementation.
 
-### MCP Client
+**MCP Client** (`tools/mcp_client.py`)
+- Launches the MCP support server as a subprocess over stdio
+- Sends tool calls and returns structured payloads to agents
 
-- starts the MCP support server through stdio
-- sends tool calls
-- returns structured tool outputs to the agents
+**MCP Support Server** (`mcp/support_server.py`)
+- Exposes tools using `FastMCP`
+- Wraps user lookup, password reset, ticket creation, appointment operations, and Confluence retrieval
 
-### MCP Support Server
+## Architectural Principles
 
-- exposes support tools using FastMCP
-- wraps operational and data access functions
-- provides both simulated support operations and live Confluence retrieval
-
-### MCP Tools in This System
-
-- `lookup_user`
-- `reset_user_password`
-- `create_support_ticket`
-- `list_it_appointments`
-- `book_it_appointment`
-- `fetch_confluence_pages`
-
-## Architectural Strengths
-
-- modular multi-agent design
-- clean separation of routing, knowledge, workflow, and escalation logic
-- grounded answers through RAG
-- safe operational execution through confirmation-based workflows
-- session memory for conversational continuity
-- extensible MCP tool layer for adding more IT operations later
-- clear fallback path from self-service to human support
+- **LLM primary, regex only for data formats** — slot IDs and fast-path username patterns use regex; all semantic decisions use the LLM
+- **Structured output everywhere** — every LLM call returns `{action/intent, confidence, reasoning}` via OpenAI's JSON schema output mode
+- **One LLM call per agent** — no double-call confirmation pattern; single structured call is both faster and more accurate
+- **Fail safe** — LLM exceptions default to `escalation` (intake) or `ask_for_username` (workflow), never to deleted heuristics
+- **Observable by design** — confidence scores and reasoning traces surface in every API response
+- **No new dependencies** — all changes use the existing `openai` structured output API already in the stack
 
 ## Short Architecture Description for Slides or Reports
 
-Constellations IT Support is a multi-agent AI architecture built on FastAPI, LangGraph, OpenAI models, FAISS, SQLite, and MCP tools. A React frontend sends user requests to a FastAPI backend. The backend loads session memory and routes each request through a LangGraph workflow. The Intake Agent classifies requests into knowledge, workflow, or escalation paths. The Knowledge Agent uses retrieval-augmented generation over live Confluence content stored in a FAISS vector index. The Workflow Agent performs safe password reset operations through MCP tools after confirming the target user. The Escalation Agent handles unsupported issues, appointment scheduling, and software or hardware request submission. SQLite stores short-term conversation memory, while MCP connects the agents to operational tools and live knowledge sources.
-
-## Image Generator Prompt
-
-Create a clean, modern AI system architecture diagram for a school IT support platform called "Constellations IT Support." Show a left-to-right flow with labeled layers and arrows. On the far left, show users in a web chat frontend built with React. The frontend sends requests to a FastAPI backend API. Inside the backend, show a LangGraph orchestration engine with four agent blocks: Intake Agent at the top as the router, then three routed specialist agents: Knowledge Agent, Workflow Agent, and Escalation Agent. The Intake Agent should route requests to the other three agents. Below the orchestration layer, show a SQLite memory store holding session memory and recent conversation history. To the right of the Knowledge Agent, show a RAG pipeline with Confluence pages flowing into chunking, OpenAI embeddings, and a FAISS vector store, then retrieved context returning to the Knowledge Agent. To the right of the Workflow and Escalation Agents, show an MCP client connected to an MCP support server. From the MCP support server, branch to tools for user lookup, password reset, support ticket creation, appointment scheduling, and live Confluence retrieval. Use a professional enterprise diagram style, white background, blue and teal accents, soft gray infrastructure boxes, clear labels, minimal icons, and directional arrows. Emphasize that the system supports three outcomes: knowledge answer, automated workflow execution, and human-support escalation.
-
-## Compact Image Prompt
-
-Multi-agent school IT support architecture diagram, React frontend, FastAPI backend, LangGraph orchestration, Intake Agent router, Knowledge Agent with RAG over Confluence, Workflow Agent for password reset, Escalation Agent for appointments and request tickets, SQLite conversation memory, MCP client and MCP support server, FAISS vector store, OpenAI embeddings, user lookup and password reset tools, modern enterprise system design, white background, blue teal palette, clean arrows, professional technical infographic.
+Constellations IT Support is a full-stack multi-agent AI application built on FastAPI, LangGraph, OpenAI, FAISS, SQLite, and MCP tools. A React frontend sends user requests to a FastAPI backend. The backend loads session memory and routes each turn through a LangGraph workflow. The Intake Agent uses chain-of-thought LLM prompting to classify requests into four intents — knowledge, workflow, escalation, or smalltalk — with a confidence score and reasoning trace on every turn. The Knowledge Agent uses retrieval-augmented generation over paragraph-chunked Confluence content stored in a FAISS index, with LLM self-assessed confidence gating escalation. The Workflow Agent performs safe password reset operations through MCP tools after LLM-driven step decisions and mandatory user confirmation. The Escalation Agent handles appointments and software/hardware requests using fully LLM-driven action classification, replacing all previous pattern-matching lists. A Smalltalk Agent handles casual conversation before steering users back to IT support. Every response includes a structured reasoning trace with routing confidence, agent step decisions, and retrieval scores.

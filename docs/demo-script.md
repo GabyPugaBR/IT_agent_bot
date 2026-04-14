@@ -1,37 +1,97 @@
 # Demonstration Narrative
 
-## Demonstration Sequence
-The recommended demonstration begins on the `Constellations.com` homepage in order to establish the project as an embedded school support experience rather than a standalone chatbot. The presenter then opens the IT Agent and walks through the following sequence:
+## Opening Context
 
-1. A password-help question is submitted to show the knowledge agent retrieving and explaining school-specific reset guidance.
-2. An explicit reset command for a known user is submitted to show the workflow agent completing a simulated password reset.
-3. A Wi-Fi troubleshooting question is submitted to demonstrate that the system can return to retrieval-based support after a workflow action.
-4. An unsupported question is submitted to show escalation behavior and appointment offering.
-5. An appointment is selected to demonstrate the human-support handoff path.
-6. A software or hardware request is submitted to demonstrate structured request intake and automated acknowledgement.
+Begin on the Constellations School homepage to establish the project as an embedded school support experience — not a standalone chatbot. The IT Agent button is visible in the header and as a floating launcher. This signals intentional product thinking: the AI is a feature of a real user environment, not a demo console.
+
+## Recommended Demonstration Sequence
+
+### 1. Small Talk — Smalltalk Agent
+**Say or type:** "Hey, how are you doing today?"
+
+**What happens:** The Smalltalk Agent responds warmly in 1–2 sentences and invites the user to ask about IT support. After a second casual message, it steers more clearly back to IT.
+
+**Talking point:** The bot can hold a brief natural conversation without breaking. It doesn't refuse or robotically redirect on the first message. After 1–2 turns it gracefully returns focus to IT support.
+
+---
+
+### 2. Password Help Question — Knowledge Agent → Password Offer
+**Say or type:** "How do I reset my password?"
+
+**What happens:** The Intake Agent routes to Knowledge. The Knowledge Agent retrieves the relevant Confluence documentation, generates a grounded answer explaining the reset process, then offers: "Would you like me to perform the reset for you?"
+
+**Talking point:** This is the two-flow password design. A question about passwords goes to RAG first — the user gets an actual explanation. The system then offers to act, bridging knowledge and workflow naturally. The LLM assessed this answer as high-confidence based on retrieved context, so it did not escalate.
+
+---
+
+### 3. Explicit Password Reset — Workflow Agent
+**Say or type:** "Reset password for teacher3"
+
+**What happens:** The Intake Agent routes directly to Workflow (skipping RAG — this is an action request, not a question). The Workflow Agent extracts the username and shows: "I found [display name] (teacher3). Should I reset the password for this user?" After you confirm, it calls the MCP tool to execute the reset and returns the temporary password and policy.
+
+**Talking point:** Note the mandatory confirmation step — the system never executes a reset without explicit user approval. The LLM handles the confirmation detection, so "yep", "go for it", and "sounds good" all work — not just the word "yes."
+
+---
+
+### 4. Wi-Fi Troubleshooting — Knowledge Agent
+**Say or type:** "My Chromebook won't connect to the school Wi-Fi"
+
+**What happens:** The Knowledge Agent retrieves relevant troubleshooting documentation and generates a grounded, step-by-step answer.
+
+**Talking point:** After a workflow action, the system returns cleanly to retrieval-based support. The answer is grounded in the actual school IT knowledge base — not a general guess.
+
+---
+
+### 5. Low-Confidence Escalation
+**Say or type:** "What do I do if a student's account gets locked after a ransomware event?"
+
+**What happens:** The Knowledge Agent finds no confident match in the knowledge base (self-assessed confidence below threshold). Rather than guessing, it escalates: "I wasn't able to find a confident answer — a human IT staff member would be best for this." It offers an appointment or request submission.
+
+**Talking point:** The system knows what it doesn't know. LLM self-assessed confidence gates escalation — this is more semantically reliable than a raw FAISS distance score.
+
+---
+
+### 6. Appointment Scheduling — Escalation Agent
+**Say or type:** "Yes, show me available appointments" (or click the option)
+
+**What happens:** The Escalation Agent calls the MCP tool to list available slots. The user selects a slot from the structured card. The agent books it via MCP and confirms.
+
+**Talking point:** The entire escalation path — offer → list → book — is driven by LLM action decisions, not keyword matching. Any natural affirmative ("sure, show me", "yes please") triggers the appointment listing correctly.
+
+---
+
+### 7. Software/Hardware Request in Plain English — Escalation Agent
+**Say or type:** "I need Adobe Premiere for my video production class — it's for the whole film department"
+
+**What happens:** The Escalation Agent recognizes this as a submittable request (enough context: what + why), creates a support ticket via MCP, and confirms: "Your request has been submitted. IT will get back to you within 72 hours."
+
+**Talking point:** Previous versions required users to fill out a rigid 5-field form. The LLM now evaluates whether the user has provided enough context to submit — plain English works.
+
+---
 
 ## Key Talking Points
-- The application is intentionally architected as a multi-agent system rather than a single conversational chain.
-- Knowledge retrieval and workflow execution are separated to preserve clarity and reduce operational risk.
-- The retrieval layer is grounded in school-specific IT support content through embeddings and a vector index.
-- MCP is used as the standard interface for support tools.
-- Session memory preserves continuity across multiple turns.
-- Docker provides a reproducible execution environment for demonstration and review.
+
+- **LLM-first architecture.** Every routing and decision call goes to the LLM first. Python logic handles only deterministic data tasks (slot ID extraction, regex fast-path). This is the core architectural shift from the original implementation.
+- **Chain-of-thought prompting with few-shot examples.** Every agent prompt uses numbered reasoning steps and concrete examples to guide the LLM reliably.
+- **Structured output on every LLM call.** Each call returns typed JSON: `{intent/action, confidence, reasoning}`. This enables gating, logging, and the reasoning trace.
+- **Reasoning trace in every response.** The API returns `routing_confidence`, `agent_step`, `answer_confidence`, and `retrieval_scores` on every turn — making the system fully observable.
+- **RAG with paragraph-level chunking.** Confluence pages are split into overlapping 800-character chunks for precise retrieval, not one blob per page.
+- **MCP as the tool interface.** All operational actions (password reset, ticket creation, appointments) go through a standardized MCP server — the same pattern used in enterprise AI tooling.
+- **Session memory for continuity.** Pending usernames and workflow state persist across turns through SQLite memory, enabling natural multi-step conversations.
 
 ## Special-Consideration Emphasis
 
 ### Retrieval-Augmented Generation
-The demonstration should explicitly note that the system uses embeddings and vector search to ground answers in a domain-specific IT knowledge base. This allows the presenter to connect the implementation directly to the rubric requirement for RAG integration.
+Emphasize that the Knowledge Agent does not generate answers from general model knowledge. It embeds the question, searches the FAISS index, retrieves school-specific IT documentation, and generates an answer grounded only in that context. The LLM self-assesses its confidence and escalates when the retrieved context is insufficient.
 
 ### Workflow Automation
-The workflow demonstration should emphasize that password reset and related support actions are not merely described; they are executed through a separate automation path.
+The password reset is not described — it is executed. The MCP tool performs the actual (simulated) operation and returns a temporary password, role-specific policy, and next-step instructions. The workflow enforces a confirmation step before every execution.
 
 ### MCP Integration
-The presenter should describe MCP as the standard tool-access layer that sits between agent logic and operational tooling.
+MCP is the standard tool-access layer between agent reasoning and operational tooling. Agents call named tools through a typed client; the server owns the implementation. This is the same architectural pattern appearing in enterprise AI platforms and OpenAI's tool-use standards.
 
 ### Multi-Agent Collaboration
-The handoff from knowledge to workflow to escalation should be framed as intentional separation of concerns rather than branching behavior inside a single agent.
+The handoff from knowledge → workflow → escalation → smalltalk is not branching inside a single agent. Each agent has a single responsibility and clear termination point. The Intake Agent handles all routing using LLM reasoning. This separation makes the system easier to debug, extend, and explain.
 
 ### Industry Awareness
-The project can be positioned as a lightweight academic prototype of enterprise AI support systems, with Glean, Moveworks, and ServiceNow Now Assist serving as reference points for the broader market direction.
-
+Position this as a lightweight educational prototype of enterprise AI support patterns. Glean, Moveworks, and ServiceNow Now Assist demonstrate that modern support platforms combine grounded retrieval, workflow automation, tool standardization, and human escalation — this project implements those same ideas at K-12 school scale, with observable reasoning.
