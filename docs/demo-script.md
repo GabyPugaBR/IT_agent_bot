@@ -11,7 +11,7 @@ Begin on the Constellations School homepage to establish the project as an embed
 
 **What happens:** The Smalltalk Agent responds warmly in 1–2 sentences and invites the user to ask about IT support. After a second casual message, it steers more clearly back to IT.
 
-**Talking point:** The bot can hold a brief natural conversation without breaking. It doesn't refuse or robotically redirect on the first message. After 1–2 turns it gracefully returns focus to IT support.
+**Talking point:** The bot can hold a brief natural conversation without breaking. It doesn't refuse or robotically redirect on the first message. Once 2 or more consecutive casual turns are detected, the system increases redirect pressure — tracked in session metadata — and steers back to IT support.
 
 ---
 
@@ -72,12 +72,13 @@ Begin on the Constellations School homepage to establish the project as an embed
 ## Key Talking Points
 
 - **LLM-first architecture.** Every routing and decision call goes to the LLM first. Python logic handles only deterministic data tasks (slot ID extraction, regex fast-path). This is the core architectural shift from the original implementation.
-- **Chain-of-thought prompting with few-shot examples.** Every agent prompt uses numbered reasoning steps and concrete examples to guide the LLM reliably.
-- **Structured output on every LLM call.** Each call returns typed JSON: `{intent/action, confidence, reasoning}`. This enables gating, logging, and the reasoning trace.
+- **Structured prompts with examples.** Every agent prompt uses concrete examples and explicit decision fields to guide the model reliably.
+- **Structured output on decision-making LLM calls.** Routing, workflow, escalation, and retrieval-answer calls return typed JSON: `{intent/action, confidence, reasoning}`. This enables gating, logging, and the reasoning trace.
 - **Reasoning trace in every response.** The API returns `routing_confidence`, `agent_step`, `answer_confidence`, and `retrieval_scores` on every turn — making the system fully observable.
 - **RAG with paragraph-level chunking.** Confluence pages are split into overlapping 800-character chunks for precise retrieval, not one blob per page.
 - **MCP as the tool interface.** All operational actions (password reset, ticket creation, appointments) go through a standardized MCP server — the same pattern used in enterprise AI tooling.
 - **Session memory for continuity.** Pending usernames and workflow state persist across turns through SQLite memory, enabling natural multi-step conversations.
+- **Safe fallbacks on every agent.** Every agent wraps its LLM call in `try/except`. If the model call fails, intake defaults to `escalation`, workflow defaults to `ask_for_username`, knowledge escalates with a human-support offer, and escalation offers appointments. No agent silently fails.
 
 ## Special-Consideration Emphasis
 

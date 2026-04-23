@@ -4,7 +4,7 @@
 
 Constellations IT Support is a lightweight educational prototype of enterprise AI support systems. It does not try to match the breadth of a commercial platform, but it demonstrates the same foundational patterns using production-grade tools:
 
-- **LLM-driven routing** with chain-of-thought reasoning and confidence scoring
+- **LLM-guided routing** with confidence scoring and deterministic fast paths
 - **Retrieval-augmented generation** grounded in domain-specific documentation
 - **Workflow automation** with safety guardrails and mandatory confirmation
 - **Tool standardization** through MCP — the same protocol gaining adoption in enterprise AI tooling
@@ -23,7 +23,7 @@ Moveworks focuses on enterprise employee support — combining search, action-ta
 ServiceNow Now Assist represents the enterprise workflow side of AI support. It is the reference point for combining conversational answers with action-taking and structured ticket creation. The Constellations escalation agent — which submits requests as support tickets, offers appointment scheduling, and books slots via tool calls — mirrors this pattern at prototype scale.
 
 ### OpenAI and the Structured Output Ecosystem
-The project uses OpenAI's structured output API (JSON schema mode) on every LLM call. This reflects current best practice for building reliable agentic systems: typed responses, no parsing hacks, predictable behavior under variation. The reasoning trace pattern — surfacing `confidence` and `reasoning` on every decision — is aligned with how observability is being built into production AI systems.
+The project uses OpenAI's structured output API for decision-making calls, including routing, workflow, escalation, and retrieval-answer generation. This reflects current best practice for building reliable agentic systems: typed responses, no parsing hacks, predictable behavior under variation. The reasoning trace pattern — surfacing `confidence` and `reasoning` on every decision — is aligned with how observability is being built into production AI systems.
 
 ## Why Multi-Agent Architecture Matters
 
@@ -36,7 +36,7 @@ Separating concerns into specialist agents — each with its own prompt, tools, 
 
 ## Suggested Presentation Language
 
-> "This project is a lightweight educational prototype inspired by enterprise AI support platforms. Commercial systems like Glean, Moveworks, and ServiceNow show that modern support tools combine grounded retrieval, workflow automation, tool standardization, and human escalation. Constellations IT Support demonstrates those same ideas in a K-12 IT context — with chain-of-thought LLM routing, RAG-grounded answers, MCP-backed tool execution, and observable reasoning traces on every response turn."
+> "This project is a lightweight educational prototype inspired by enterprise AI support platforms. Commercial systems like Glean, Moveworks, and ServiceNow show that modern support tools combine grounded retrieval, workflow automation, tool standardization, and human escalation. Constellations IT Support demonstrates those same ideas in a K-12 IT context — with LLM-guided routing, RAG-grounded answers, MCP-backed tool execution, and observable reasoning traces on every response turn."
 
 ## Why This Matters for the Portfolio
 

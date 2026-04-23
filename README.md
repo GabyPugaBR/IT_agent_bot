@@ -1,6 +1,6 @@
 # Constellations IT Support
 
-Constellations IT Support is a full-stack multi-agent AI application for K-12 school IT support. It demonstrates how LLM-driven routing, retrieval-augmented generation, workflow automation, MCP-based tool integration, and human-support escalation come together in a single product experience.
+Constellations IT Support is a full-stack multi-agent AI application for K-12 school IT support. It implements LLM-guided routing, retrieval-augmented generation, workflow automation, MCP-based tool integration, and human-support escalation in a single system.
 
 ## Tech Stack
 
@@ -17,27 +17,27 @@ Constellations IT Support is a full-stack multi-agent AI application for K-12 sc
 
 ## Project Summary
 
-A capstone prototype for school IT support covering password reset, Wi-Fi troubleshooting, Chromebook assistance, appointment scheduling, software and hardware request intake, and natural conversational engagement. Built on a core architectural principle: **the LLM reasons first**. All semantic decisions — routing, step selection, confidence assessment, request classification — are made by the language model using structured output and chain-of-thought prompting.
+A school IT support prototype covering password reset, Wi-Fi troubleshooting, Chromebook assistance, appointment scheduling, software and hardware request intake, and conversational handling. Built on a core architectural principle: **the LLM reasons first for semantic decisions**. Routing, step selection, confidence assessment, and request classification are primarily handled by the language model using structured prompts, with deterministic fast paths for usernames and slot IDs.
 
 ## Agent Architecture
 
 | Agent | Role |
 |---|---|
-| **Intake Agent** | LLM-driven router — classifies every message into `knowledge`, `workflow`, `escalation`, or `smalltalk` with a confidence score and reasoning trace |
-| **Knowledge Agent** | RAG-grounded Q&A over Confluence IT docs — LLM self-assesses confidence and bridges to password reset offer when relevant |
-| **Workflow Agent** | Safe multi-step password reset — LLM extracts usernames from natural language and decides each step; mandatory confirmation before execution |
-| **Escalation Agent** | Appointment scheduling, software/hardware requests, and declines — fully LLM-driven action classification, no pattern lists |
-| **Smalltalk Agent** | Natural conversational engagement for 1–2 turns before steering back to IT support |
+| **Intake Agent** | LLM-guided router — classifies every message into `knowledge`, `workflow`, `escalation`, or `smalltalk` with a confidence score and reasoning trace |
+| **Knowledge Agent** | RAG-grounded Q&A over Confluence IT docs — retrieves school-specific context and offers password reset help when relevant |
+| **Workflow Agent** | Password reset workflow — uses username fast-path extraction and mandatory confirmation before execution |
+| **Escalation Agent** | Appointment scheduling, software/hardware requests, and declines — LLM-guided action selection with deterministic slot booking when needed |
+| **Smalltalk Agent** | Short conversational handling before steering back to IT support |
 
 ## Core Capabilities
 
-- Chain-of-thought LLM routing with confidence scores and reasoning traces on every turn
+- Structured LLM routing with confidence scores and reasoning traces on every turn
 - Retrieval-grounded answers over paragraph-chunked Confluence school IT documentation
 - Two-flow password handling: questions go to RAG first, action requests go directly to workflow
 - Multi-step password reset workflow with LLM-driven step decisions and mandatory confirmation
 - Natural-language request submission — no rigid field format required
 - Appointment scheduling via MCP tool integration
-- Smalltalk handling with graceful IT support redirection
+- Short conversational handling with IT support redirection
 - Observable reasoning: `routing_confidence`, `agent_step`, `answer_confidence`, and `retrieval_scores` in every API response
 - Persistent multi-turn session memory via SQLite
 
@@ -46,7 +46,7 @@ A capstone prototype for school IT support covering password reset, Wi-Fi troubl
 - **Frontend:** React (CRA, school-themed SPA)
 - **Backend:** FastAPI
 - **Orchestration:** LangGraph `StateGraph`
-- **LLM:** OpenAI (structured output API — `gpt-4.1-mini`)
+- **LLM:** OpenAI (`gpt-4.1-mini` for routing, workflow, escalation, and answer generation)
 - **Retrieval:** OpenAI `text-embedding-3-small` + FAISS (paragraph-level chunking with overlap)
 - **Tool Layer:** MCP server (`FastMCP`) + typed MCP client
 - **Memory:** SQLite (session + 6-turn conversation history)
@@ -118,14 +118,14 @@ npm start
 ```text
 backend/
   agents/
-    intake_agent.py       # LLM-driven router (4 intents, structured output)
-    knowledge_agent.py    # RAG Q&A with LLM confidence gating
-    workflow_agent.py     # Password reset workflow with LLM step decisions
-    escalation_agent.py   # Appointments and requests, fully LLM-driven
-    smalltalk_agent.py    # Natural conversation with IT redirect
-    prompts.py            # All agent prompts with chain-of-thought + few-shot
+    intake_agent.py       # LLM-guided router with confidence/reasoning metadata
+    knowledge_agent.py    # RAG Q&A with confidence gating and password follow-up
+    workflow_agent.py     # Password reset workflow with username fast-path and confirmation
+    escalation_agent.py   # Appointments and requests, with deterministic slot booking
+    smalltalk_agent.py    # Natural conversation with gentle IT redirect
+    prompts.py            # Agent prompts and structured decision guidance
   graph/
-    agent_graph.py        # LangGraph StateGraph with 4 specialist nodes
+    agent_graph.py        # LangGraph StateGraph: 1 intake router + 4 specialist nodes
     state.py              # AgentState TypedDict
   rag/
     ingest.py             # Confluence ingestion with paragraph-level chunking
@@ -185,7 +185,7 @@ Every `/chat` response includes a `reasoning_trace`:
 
 ## Industry Context
 
-This project demonstrates patterns found in enterprise AI support platforms — Glean (grounded retrieval), Moveworks (knowledge + workflow + MCP tooling), and ServiceNow Now Assist (workflow automation + human escalation) — applied at K-12 school scale. The same architectural choices that appear in those systems (structured LLM output, RAG confidence gating, tool standardization via MCP, multi-agent separation of concerns) are present here as first-class design decisions.
+This project reflects patterns found in enterprise AI support platforms — Glean (grounded retrieval), Moveworks (knowledge plus workflow plus MCP tooling), and ServiceNow Now Assist (workflow automation plus human escalation) — applied at K-12 school scale. The same architectural choices that appear in those systems (structured LLM decisioning, RAG confidence gating, tool standardization via MCP, multi-agent separation of concerns) are present here as first-class design decisions.
 
 ## Deployment
 

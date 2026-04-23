@@ -2,14 +2,14 @@
 
 ## System Summary
 
-Constellations IT Support is a multi-agent AI support system for school IT operations. The system accepts chat requests from a React frontend, routes them through a FastAPI backend, and orchestrates them through a LangGraph agent graph. Every request is classified by an LLM-powered Intake Agent and dispatched to one of four specialist agents:
+Constellations IT Support is a multi-agent AI support system for school IT operations. The system accepts chat requests from a React frontend, routes them through a FastAPI backend, and orchestrates them through a LangGraph agent graph. Most requests are classified by an LLM-powered Intake Agent and dispatched to one of four specialist agents, with deterministic fast paths and safe fallbacks where appropriate:
 
 - **Knowledge Agent** — retrieval-augmented answers from the school IT knowledge base
 - **Workflow Agent** — automated password reset execution with confirmation guardrails
 - **Escalation Agent** — human-support handoff via appointments and request submission
-- **Smalltalk Agent** — natural conversational engagement before steering back to IT support
+- **Smalltalk Agent** — short conversational handling before steering back to IT support
 
-The system is designed around a core principle: **the LLM reasons first**. Python logic is reserved for deterministic data-format tasks (slot ID extraction, fast-path username matching). All semantic decisions — routing, step selection, confidence assessment, request classification — are made by the language model using structured output and chain-of-thought prompting.
+The system is designed around a core principle: **the LLM reasons first for semantic decisions**. Python logic is reserved for deterministic data-format tasks and fast paths (slot ID extraction, username matching, safe defaults). Most semantic decisions — routing, step selection, confidence assessment, and request classification — are made by the language model using structured prompts.
 
 ## High-Level Flow
 
@@ -17,11 +17,11 @@ The system is designed around a core principle: **the LLM reasons first**. Pytho
 2. Frontend calls the FastAPI backend `POST /chat` endpoint.
 3. FastAPI loads session memory from SQLite and builds the initial agent state.
 4. LangGraph dispatches the request to the **Intake Agent**.
-5. The Intake Agent uses the LLM to classify the request into one of four intents: `knowledge`, `workflow`, `escalation`, or `smalltalk`. It returns a confidence score and a one-sentence reasoning trace.
+5. The Intake Agent uses the LLM to classify the request into one of four intents: `knowledge`, `workflow`, `escalation`, or `smalltalk`. It returns a confidence score and a one-sentence reasoning trace, with safe fallback behavior if the model is unavailable.
 6. LangGraph routes to the appropriate specialist agent.
 7. The specialist agent executes its logic — retrieving documents, running MCP tools, or generating a conversational reply — and returns a response with structured metadata.
 8. FastAPI appends a `reasoning_trace` (routing confidence, agent step, answer confidence, retrieval scores) to the response and saves the turn to SQLite memory.
-9. The frontend renders the response, structured cards, follow-up actions, appointment slots, or request forms as appropriate.
+9. The frontend renders the response and structured cards, follow-up actions, appointment slots, or request forms as appropriate.
 
 ## Core Components
 
@@ -29,7 +29,7 @@ The system is designed around a core principle: **the LLM reasons first**. Pytho
 
 - React single-page application embedded in a school-themed landing page
 - Chat modal with starter pills, structured response cards, appointment slot selection, and request forms
-- Sends `POST /chat` with message and session ID; renders `reasoning_trace` and `metadata` from response
+- Sends `POST /chat` with message and session ID; renders the response and `metadata` from the backend
 - Environment-configured backend URL via `REACT_APP_API_URL`
 
 ### 2. API Layer
@@ -41,10 +41,10 @@ The system is designed around a core principle: **the LLM reasons first**. Pytho
 
 ### 3. Orchestration Layer
 
-- Built with LangGraph `StateGraph`
-- Entry point: **Intake Agent** (always first)
-- Conditional routing to four specialist agents based on classified intent
-- Each agent terminates at `END` after producing its response
+- Built with LangGraph `StateGraph` with 5 nodes total: 1 intake router + 4 specialist agents
+- Entry point: **Intake Agent** (always first — classifies intent, never produces a user-facing response directly)
+- Conditional routing to four specialist agents based on classified intent: Knowledge, Workflow, Escalation, Smalltalk
+- Each specialist agent terminates at `END` after producing its response
 
 ### 4. Memory Layer
 
@@ -89,7 +89,7 @@ The system is designed around a core principle: **the LLM reasons first**. Pytho
 
 **How it works:**
 - Formats the last 6 conversation turns as a transcript
-- Calls the LLM with a chain-of-thought prompt and structured output schema
+- Calls the LLM with a structured prompt and output schema
 - LLM returns: `intent`, `confidence` (0.0–1.0), `reasoning` (one sentence)
 - Returns are written to `metadata` as `routing_confidence` and `routing_reasoning`
 - Exception fallback: `escalation` (the safest default)
@@ -143,14 +143,14 @@ The system is designed around a core principle: **the LLM reasons first**. Pytho
 
 ### Smalltalk Agent
 
-**Role:** Natural conversational engagement for off-topic messages.
+**Role:** Short conversational handling for off-topic messages.
 
 **How it works:**
-- Responds warmly in 1–2 sentences using the LLM
+- Returns a brief 1–2 sentence conversational response using the LLM
 - Tracks `consecutive_smalltalk_turns` in metadata; after 2+ turns, the prompt instructs the LLM to redirect more clearly to IT support
 - Always ends with an invitation to ask about IT needs
 
-**Why it matters:** A support bot that abruptly rejects "good morning" feels broken. Brief natural engagement improves perceived quality without compromising the support focus.
+**Why it matters:** A support bot that abruptly rejects "good morning" can feel unusable. Brief conversational handling improves continuity without changing the support focus.
 
 ## Reasoning Trace
 
@@ -196,12 +196,12 @@ The MCP layer decouples agent reasoning from operational tooling. Agents call na
 ## Architectural Principles
 
 - **LLM primary, regex only for data formats** — slot IDs and fast-path username patterns use regex; all semantic decisions use the LLM
-- **Structured output everywhere** — every LLM call returns `{action/intent, confidence, reasoning}` via OpenAI's JSON schema output mode
+- **Structured output on decision-making calls** — routing, workflow, and escalation return `{action/intent, confidence, reasoning}` via OpenAI's JSON schema output mode
 - **One LLM call per agent** — no double-call confirmation pattern; single structured call is both faster and more accurate
-- **Fail safe** — LLM exceptions default to `escalation` (intake) or `ask_for_username` (workflow), never to deleted heuristics
+- **Fail safe, not fail open** — every agent has a `try/except` block with a safe default: intake falls back to `escalation`, workflow falls back to `ask_for_username`, knowledge falls back to escalating with a human-support offer, escalation falls back to `offer_appointments`. No agent can silently fail without producing a usable response.
 - **Observable by design** — confidence scores and reasoning traces surface in every API response
 - **No new dependencies** — all changes use the existing `openai` structured output API already in the stack
 
 ## Short Architecture Description for Slides or Reports
 
-Constellations IT Support is a full-stack multi-agent AI application built on FastAPI, LangGraph, OpenAI, FAISS, SQLite, and MCP tools. A React frontend sends user requests to a FastAPI backend. The backend loads session memory and routes each turn through a LangGraph workflow. The Intake Agent uses chain-of-thought LLM prompting to classify requests into four intents — knowledge, workflow, escalation, or smalltalk — with a confidence score and reasoning trace on every turn. The Knowledge Agent uses retrieval-augmented generation over paragraph-chunked Confluence content stored in a FAISS index, with LLM self-assessed confidence gating escalation. The Workflow Agent performs safe password reset operations through MCP tools after LLM-driven step decisions and mandatory user confirmation. The Escalation Agent handles appointments and software/hardware requests using fully LLM-driven action classification, replacing all previous pattern-matching lists. A Smalltalk Agent handles casual conversation before steering users back to IT support. Every response includes a structured reasoning trace with routing confidence, agent step decisions, and retrieval scores.
+Constellations IT Support is a full-stack multi-agent AI application built on FastAPI, LangGraph, OpenAI, FAISS, SQLite, and MCP tools. A React frontend sends user requests to a FastAPI backend. The backend loads session memory and routes each turn through a LangGraph workflow. The Intake Agent uses structured LLM prompting to classify requests into four intents — knowledge, workflow, escalation, or smalltalk — and routes to one of four specialist agents. The Knowledge Agent uses retrieval-augmented generation over paragraph-chunked Confluence content stored in a FAISS index, with LLM self-assessed confidence gating escalation. The Workflow Agent performs password reset operations through MCP tools after LLM-driven step decisions, username fast-path extraction, and mandatory user confirmation. The Escalation Agent handles appointments and software/hardware requests using LLM-guided action classification with deterministic slot booking when a slot ID is present. The Smalltalk Agent handles brief conversational turns before steering users back to IT support. Every response includes a structured reasoning trace with routing confidence, agent step decisions, and retrieval scores.
