@@ -56,7 +56,8 @@ The system is designed around a core principle: **the LLM reasons first for sema
 ### 5. Knowledge Layer
 
 - Retrieval-augmented generation pipeline over Confluence school IT documentation
-- Documents fetched live via MCP, cleaned, and split into overlapping paragraph-based chunks (800 char max, 100 char overlap) for precise retrieval
+- Documents fetched via MCP when the FAISS store is missing, invalid, or stale; otherwise the cached index and metadata are reused for fast queries
+- Source pages are cleaned and split into overlapping paragraph-based chunks (800 char max, 100 char overlap) for precise retrieval
 - Embeddings generated with OpenAI `text-embedding-3-small` and stored in a FAISS flat inner-product index
 - At query time: embed question → search FAISS → retrieve top-k chunks → LLM generates structured answer with self-assessed confidence, password-relevance flag, and source reasoning
 - If LLM-assessed confidence < 0.6, agent escalates rather than guessing
@@ -68,6 +69,7 @@ The system is designed around a core principle: **the LLM reasons first for sema
 - MCP tools available:
   - `lookup_user` — look up a school user by username
   - `reset_user_password` — generate and apply a role-appropriate temporary password
+  - `get_role_password_policy` — return the password policy for a given user role
   - `create_support_ticket` — log an escalation or failure as a support ticket
   - `list_it_appointments` — retrieve available IT appointment slots
   - `book_it_appointment` — book a selected slot
@@ -124,6 +126,7 @@ The system is designed around a core principle: **the LLM reasons first for sema
 - Searches conversation history for a `pending_reset_username` from a prior turn
 - Calls the LLM to decide the next step: `ask_for_username`, `confirm_target_user`, `execute_reset`, or `escalate`
 - LLM returns: `action`, `confidence`, `reasoning`
+- In non-regex username cases, the workflow may make an additional structured LLM call for username extraction before the step-decision call
 - Never executes a reset without a confirmed pending target
 - Calls MCP tools for user lookup, password reset, and ticket creation on failure
 
@@ -147,7 +150,8 @@ The system is designed around a core principle: **the LLM reasons first for sema
 
 **How it works:**
 - Returns a brief 1–2 sentence conversational response using the LLM
-- Tracks `consecutive_smalltalk_turns` in metadata; after 2+ turns, the prompt instructs the LLM to redirect more clearly to IT support
+- Records `consecutive_smalltalk_turns` in the current response metadata and uses that value to increase redirect pressure if it reaches 2+ turns
+- Because each API turn starts with fresh graph metadata, this counter is response-local unless the prior metadata is explicitly rehydrated into state
 - Always ends with an invitation to ask about IT needs
 
 **Why it matters:** A support bot that abruptly rejects "good morning" can feel unusable. Brief conversational handling improves continuity without changing the support focus.
@@ -173,13 +177,14 @@ This makes the system observable: every routing decision and answer confidence c
 
 ## RAG and Knowledge Architecture
 
-1. Confluence pages fetched through the MCP support server
-2. Page content cleaned and split into overlapping paragraph-level chunks (800 char, 100 char overlap)
-3. Chunks embedded with OpenAI `text-embedding-3-small`
-4. Embeddings stored in a FAISS flat inner-product index with L2 normalization
-5. At query time: embed question → FAISS search → top-k chunks returned with cosine similarity scores
-6. Retrieved chunks passed to Knowledge Agent LLM prompt
-7. LLM generates a structured answer with self-assessed confidence — no hallucination of facts not in context
+1. On first use, or when the stored source signature changes, Confluence pages are fetched through the MCP support server
+2. Page content is cleaned and split into overlapping paragraph-level chunks (800 char, 100 char overlap)
+3. Chunks are embedded with OpenAI `text-embedding-3-small`
+4. Embeddings are stored in a FAISS flat inner-product index with L2 normalization alongside chunk metadata
+5. On later requests, the cached FAISS index is reused if the index, metadata, and Confluence source signature are still valid
+6. At query time: embed question → FAISS search → top-k chunks returned with cosine similarity scores
+7. Retrieved chunks are passed to the Knowledge Agent LLM prompt
+8. LLM generates a structured answer with self-assessed confidence — no hallucination of facts not in context
 
 ## MCP Tool Architecture
 
@@ -191,13 +196,13 @@ The MCP layer decouples agent reasoning from operational tooling. Agents call na
 
 **MCP Support Server** (`mcp/support_server.py`)
 - Exposes tools using `FastMCP`
-- Wraps user lookup, password reset, ticket creation, appointment operations, and Confluence retrieval
+- Wraps user lookup, password reset, role password policies, ticket creation, appointment operations, and Confluence retrieval
 
 ## Architectural Principles
 
 - **LLM primary, regex only for data formats** — slot IDs and fast-path username patterns use regex; all semantic decisions use the LLM
 - **Structured output on decision-making calls** — routing, workflow, and escalation return `{action/intent, confidence, reasoning}` via OpenAI's JSON schema output mode
-- **One LLM call per agent** — no double-call confirmation pattern; single structured call is both faster and more accurate
+- **Single decision call per agent step** — routing, workflow step selection, escalation action selection, and grounded knowledge answers each use one structured decision/generation call; Workflow may perform a separate extraction call when regex cannot identify a username
 - **Fail safe, not fail open** — every agent has a `try/except` block with a safe default: intake falls back to `escalation`, workflow falls back to `ask_for_username`, knowledge falls back to escalating with a human-support offer, escalation falls back to `offer_appointments`. No agent can silently fail without producing a usable response.
 - **Observable by design** — confidence scores and reasoning traces surface in every API response
 - **No new dependencies** — all changes use the existing `openai` structured output API already in the stack
