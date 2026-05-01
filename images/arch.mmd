@@ -1,0 +1,87 @@
+---
+config:
+  layout: fixed
+---
+flowchart LR
+
+%% =====================
+%% USER
+%% =====================
+subgraph Channels["User"]
+    U["User<br>Web App"]
+end
+
+%% =====================
+%% BACKEND
+%% =====================
+subgraph API["Backend"]
+    API1["FastAPI (Render)<br>Chat Endpoint"]
+end
+
+%% =====================
+%% ORCHESTRATION
+%% =====================
+subgraph Orchestration["LangGraph Orchestration"]
+    IA["Intake Agent<br>(Classifies Request)"]
+    KA["Knowledge Agent<br>(Answers Questions)"]
+    WA["Workflow Agent<br>(Executes Actions)"]
+    EA["Escalation Agent<br>(Human Support)"]
+end
+
+%% =====================
+%% DATA
+%% =====================
+subgraph Data["Data Layer"]
+    KB["Knowledge Base"]
+    VS["Vector Store (FAISS)"]
+    MEM["Session Memory"]
+end
+
+%% =====================
+%% TOOLS
+%% =====================
+subgraph Tools["MCP Tool Layer"]
+    MCP["MCP Client"]
+    T1["User Lookup"]
+    T2["Password Reset"]
+    T3["Create Ticket"]
+    T4["Appointments"]
+end
+
+%% =====================
+%% HUMAN
+%% =====================
+HUM["IT Support"]
+
+%% =====================
+%% FLOW
+%% =====================
+U --> API1 --> IA
+
+IA --> KA
+IA --> WA
+IA --> EA
+
+KA --> VS
+VS --> KA
+KB --> VS
+
+WA --> MCP
+EA --> MCP
+
+MCP --> T1
+MCP --> T2
+MCP --> T3
+MCP --> T4
+
+T3 --> HUM
+T4 --> HUM
+
+API1 --> MEM
+MEM --> IA
+
+KA --> API1
+WA --> API1
+EA --> API1
+
+API1 --> U
