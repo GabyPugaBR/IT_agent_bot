@@ -10,6 +10,10 @@ services:
   frontend:
     build: ./frontend
     container_name: constellations-frontend
+    env_file:
+      - ./frontend/.env
+    environment:
+      - HOST=0.0.0.0
     ports:
       - "3000:3000"
     depends_on:

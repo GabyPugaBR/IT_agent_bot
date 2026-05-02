@@ -54,50 +54,193 @@ A school IT support prototype covering password reset, Wi-Fi troubleshooting, Ch
 
 ## Execution Requirements
 
-- Python 3.11 or later
-- Node.js 20 or later
-- Docker Desktop
-- A valid OpenAI API key
+- **Docker Desktop** for the easiest local setup
+- **A valid OpenAI API key** for all LLM and embedding calls
+- **Atlassian/Confluence credentials** for full Knowledge Agent / RAG functionality
+- **Python 3.11 or later** only if running without Docker
+- **Node.js 20 or later** only if running without Docker
+
+The password reset, appointment scheduling, and ticket workflows use local JSON data files. The Knowledge Agent retrieves school IT documentation from Confluence and builds a FAISS index, so knowledge-base questions require valid Confluence environment variables.
 
 ## Environment Configuration
 
-### Backend
-Copy `backend/.env.example` to `backend/.env` and provide:
+The app reads secrets from local `.env` files. These files are intentionally ignored by Git. If someone forks this repository, they must create their own local env files.
+
+### Backend Environment
+
+Create the backend env file:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Then open `backend/.env` and replace the placeholder values:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_CHAT_MODEL=gpt-4.1-mini
 OPENAI_ROUTER_MODEL=gpt-4.1-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
-# Optional: Confluence integration for live knowledge base
 CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
 ATLASSIAN_EMAIL=you@example.com
 ATLASSIAN_API_TOKEN=your_token
 CONFLUENCE_PAGE_ID=12345,67890
 ```
 
-### Frontend
-The frontend reads `REACT_APP_API_URL` at build time. Set it in Vercel (or a local `.env`) to point at your backend:
+Backend variables:
+
+| Variable | Required? | What it does |
+|---|---:|---|
+| `OPENAI_API_KEY` | Yes | Authenticates OpenAI chat and embedding calls |
+| `OPENAI_CHAT_MODEL` | Recommended | Model used for grounded answers and smalltalk. Defaults to `gpt-4.1-mini` if omitted |
+| `OPENAI_ROUTER_MODEL` | Recommended | Model used for intake, workflow, and escalation decisions. Falls back to `OPENAI_CHAT_MODEL` if omitted |
+| `OPENAI_EMBEDDING_MODEL` | Recommended | Model used for FAISS/RAG embeddings. Defaults to `text-embedding-3-small` if omitted |
+| `CONFLUENCE_BASE_URL` | Yes for Knowledge Agent | Atlassian site URL, usually `https://your-domain.atlassian.net/wiki` |
+| `ATLASSIAN_EMAIL` | Yes for Knowledge Agent | Email address for the Atlassian account |
+| `ATLASSIAN_API_TOKEN` | Yes for Knowledge Agent | Atlassian API token for reading Confluence pages |
+| `CONFLUENCE_PAGE_ID` | Yes for Knowledge Agent | One page ID or multiple comma-separated page IDs to ingest |
+
+### Frontend Environment
+
+Create the frontend env file:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+For local Docker or local development, this default is correct:
+
+```env
+REACT_APP_API_URL=http://127.0.0.1:8000
+```
+
+If deploying the frontend somewhere else, change `REACT_APP_API_URL` to the public backend URL, for example:
 
 ```env
 REACT_APP_API_URL=https://your-backend.onrender.com
 ```
 
-## Running the Project
+## Run Locally with Docker
 
-### Docker (recommended)
-From the repository root:
+Docker is the recommended option because it avoids manually installing Python packages and Node packages on your machine.
+
+### 1. Install Docker Desktop
+
+Download and install Docker Desktop for your operating system, then open Docker Desktop and wait until it says Docker is running.
+
+### 2. Clone the repository
+
+```bash
+git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
+cd YOUR-REPOSITORY
+```
+
+If you already have the project folder open, just open a terminal in the repository root. The repository root is the folder that contains `docker-compose.yml`.
+
+### 3. Create the environment files
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Edit `backend/.env` and add your own OpenAI and Confluence values.
+
+For local Docker, `frontend/.env` can stay as:
+
+```env
+REACT_APP_API_URL=http://127.0.0.1:8000
+```
+
+### 4. Build and start both apps
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: `http://localhost:3000`
+Leave this terminal open while using the app. The first build may take a few minutes.
+
+### 5. Open the app
+
+- Frontend website: `http://localhost:3000`
+- Backend health check: `http://localhost:8000`
 - Backend API docs: `http://localhost:8000/docs`
 
-### Local Without Docker
+### 6. Stop Docker
 
-Backend:
+In the terminal running Docker, press:
+
+```text
+Control + C
+```
+
+Then cleanly stop the containers:
+
+```bash
+docker compose down
+```
+
+### Useful Docker Commands
+
+Run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+View logs:
+
+```bash
+docker compose logs -f
+```
+
+View only backend logs:
+
+```bash
+docker compose logs -f backend
+```
+
+View only frontend logs:
+
+```bash
+docker compose logs -f frontend
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Rebuild from scratch after dependency changes:
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up
+```
+
+Check which containers are running:
+
+```bash
+docker compose ps
+```
+
+## Run Locally Without Docker
+
+Use this path only if you are comfortable installing Python and Node dependencies directly on your machine.
+
+### 1. Create backend env file
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` with your own OpenAI and Confluence values.
+
+### 2. Start the backend
+
 ```bash
 cd backend
 python3 -m venv .venv
@@ -106,11 +249,80 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Frontend:
+The backend runs at `http://127.0.0.1:8000`.
+
+### 3. Start the frontend
+
+Open a second terminal from the repository root:
+
 ```bash
 cd frontend
+cp .env.example .env
 npm install
 npm start
+```
+
+The frontend runs at `http://localhost:3000`.
+
+## Local Demo Data
+
+This project intentionally uses local mock data so the capstone can be run without a production IT system:
+
+- `backend/data/synthetic_users.json` contains synthetic students, teachers, staff, and admins
+- `backend/data/support_tickets.json` stores generated mock support tickets
+- `backend/data/appointments.json` stores rolling appointment slots
+- `backend/memory/memory.db` stores local conversation memory and is created automatically
+
+Appointment slots are refreshed to future business days and business hours when availability becomes stale or too low.
+
+## Common Setup Issues
+
+### Docker says an `.env` file is missing
+
+Create both local env files from the examples:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Then edit the backend placeholders before running Docker again.
+
+### The frontend opens, but chat says the support service is unavailable
+
+Make sure the backend is running at `http://localhost:8000`.
+
+If using Docker, check:
+
+```bash
+docker compose ps
+docker compose logs -f backend
+```
+
+Also confirm `frontend/.env` contains:
+
+```env
+REACT_APP_API_URL=http://127.0.0.1:8000
+```
+
+### Password reset works, but knowledge questions fail
+
+That usually means the OpenAI key or Confluence variables are missing or incorrect. The Knowledge Agent needs:
+
+```env
+OPENAI_API_KEY=...
+CONFLUENCE_BASE_URL=...
+ATLASSIAN_EMAIL=...
+ATLASSIAN_API_TOKEN=...
+CONFLUENCE_PAGE_ID=...
+```
+
+### Port `3000` or `8000` is already in use
+
+Stop the app currently using that port, or stop existing Docker containers:
+
+```bash
+docker compose down
 ```
 
 ## Repository Structure
@@ -134,12 +346,12 @@ backend/
   memory/
     store.py              # SQLite session and conversation history
   mcp/
-    support_server.py     # FastMCP server exposing 6 IT support tools
+    support_server.py     # FastMCP server exposing 7 IT support tools
   tools/
     mcp_client.py         # Typed MCP client wrappers
     user_db.py            # Synthetic school user directory
     password_reset.py     # Password reset logic with role-based policies
-    calendar.py           # Appointment slot management
+    calendar.py           # Rolling future business-hours appointment slots
   schemas/
     chat.py               # ChatRequest, ChatResponse, ReasoningTrace
   main.py                 # FastAPI app, /chat endpoint, reasoning trace assembly

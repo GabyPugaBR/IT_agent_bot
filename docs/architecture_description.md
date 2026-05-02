@@ -79,7 +79,7 @@ The system is designed around a core principle: **the LLM reasons first for sema
 
 - Synthetic user directory in JSON (students, teachers, staff, admins with role-specific password policies)
 - Support ticket records in JSON
-- Appointment calendar slots in JSON
+- Rolling appointment calendar slots in JSON, refreshed to future business days and business hours when availability becomes stale or too low
 - SQLite database for session and conversation memory
 - FAISS vector index and chunk metadata for RAG
 

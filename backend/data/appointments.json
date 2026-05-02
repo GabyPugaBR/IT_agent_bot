@@ -1,15 +1,15 @@
 [
   {
     "slot_id": "slot-001",
-    "starts_at": "2026-04-13T09:00:00",
+    "starts_at": "2026-05-04T09:00:00",
     "location": "IT Help Desk",
-    "status": "booked",
-    "booked_for": "student12",
-    "issue_summary": "Book appointment slot-001 for my IT issue"
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
   },
   {
     "slot_id": "slot-002",
-    "starts_at": "2026-04-13T11:00:00",
+    "starts_at": "2026-05-04T11:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -17,7 +17,7 @@
   },
   {
     "slot_id": "slot-003",
-    "starts_at": "2026-04-13T13:00:00",
+    "starts_at": "2026-05-04T13:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -25,7 +25,7 @@
   },
   {
     "slot_id": "slot-004",
-    "starts_at": "2026-04-14T09:00:00",
+    "starts_at": "2026-05-04T15:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -33,7 +33,7 @@
   },
   {
     "slot_id": "slot-005",
-    "starts_at": "2026-04-14T11:00:00",
+    "starts_at": "2026-05-05T09:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -41,7 +41,7 @@
   },
   {
     "slot_id": "slot-006",
-    "starts_at": "2026-04-14T13:00:00",
+    "starts_at": "2026-05-05T11:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -49,7 +49,7 @@
   },
   {
     "slot_id": "slot-007",
-    "starts_at": "2026-04-15T09:00:00",
+    "starts_at": "2026-05-05T13:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -57,7 +57,7 @@
   },
   {
     "slot_id": "slot-008",
-    "starts_at": "2026-04-15T11:00:00",
+    "starts_at": "2026-05-05T15:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -65,7 +65,7 @@
   },
   {
     "slot_id": "slot-009",
-    "starts_at": "2026-04-15T13:00:00",
+    "starts_at": "2026-05-06T09:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -73,7 +73,7 @@
   },
   {
     "slot_id": "slot-010",
-    "starts_at": "2026-04-16T09:00:00",
+    "starts_at": "2026-05-06T11:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -81,7 +81,7 @@
   },
   {
     "slot_id": "slot-011",
-    "starts_at": "2026-04-16T11:00:00",
+    "starts_at": "2026-05-06T13:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
@@ -89,7 +89,231 @@
   },
   {
     "slot_id": "slot-012",
-    "starts_at": "2026-04-16T13:00:00",
+    "starts_at": "2026-05-06T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-013",
+    "starts_at": "2026-05-07T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-014",
+    "starts_at": "2026-05-07T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-015",
+    "starts_at": "2026-05-07T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-016",
+    "starts_at": "2026-05-07T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-017",
+    "starts_at": "2026-05-08T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-018",
+    "starts_at": "2026-05-08T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-019",
+    "starts_at": "2026-05-08T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-020",
+    "starts_at": "2026-05-08T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-021",
+    "starts_at": "2026-05-11T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-022",
+    "starts_at": "2026-05-11T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-023",
+    "starts_at": "2026-05-11T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-024",
+    "starts_at": "2026-05-11T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-025",
+    "starts_at": "2026-05-12T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-026",
+    "starts_at": "2026-05-12T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-027",
+    "starts_at": "2026-05-12T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-028",
+    "starts_at": "2026-05-12T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-029",
+    "starts_at": "2026-05-13T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-030",
+    "starts_at": "2026-05-13T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-031",
+    "starts_at": "2026-05-13T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-032",
+    "starts_at": "2026-05-13T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-033",
+    "starts_at": "2026-05-14T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-034",
+    "starts_at": "2026-05-14T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-035",
+    "starts_at": "2026-05-14T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-036",
+    "starts_at": "2026-05-14T15:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-037",
+    "starts_at": "2026-05-15T09:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-038",
+    "starts_at": "2026-05-15T11:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-039",
+    "starts_at": "2026-05-15T13:00:00",
+    "location": "IT Help Desk",
+    "status": "available",
+    "booked_for": null,
+    "issue_summary": null
+  },
+  {
+    "slot_id": "slot-040",
+    "starts_at": "2026-05-15T15:00:00",
     "location": "IT Help Desk",
     "status": "available",
     "booked_for": null,
