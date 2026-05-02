@@ -1319,12 +1319,12 @@
     "must_change_password": false,
     "password": "UaNL1w&%^J7IDw"
   },
-  "staff1": {
-    "username": "staff1",
-    "display_name": "Staff 1",
+  "IT director": {
+    "username": "GabyR",
+    "display_name": "IT Director",
     "role": "staff",
     "unit": "Operations 1",
-    "email": "staff1@constellationsschool.org",
+    "email": "itdirector@constellationsschool.org",
     "status": "active",
     "failed_attempts": 0,
     "must_change_password": false,
