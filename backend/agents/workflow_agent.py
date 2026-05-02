@@ -12,6 +12,10 @@ from tools.mcp_client import create_support_ticket_via_mcp, lookup_user_via_mcp,
 # Fast-path regex for well-formed usernames — used as an optimization, not a gate
 USERNAME_PATTERN = re.compile(r"\b(student|teacher|staff|admin)\s*-?\s*(\d+)\b")
 ROLE_ONLY_PATTERN = re.compile(r"\b(student|teacher|staff|admin)\b")
+CUSTOM_USERNAME_PATTERN = re.compile(
+    r"\b(?:for|user(?:name)?\s*(?:is|:)?|account\s*(?:is|:)?)\s+([A-Za-z][A-Za-z0-9._-]{2,31})\b",
+    re.IGNORECASE,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -27,6 +31,12 @@ def _extract_username(text: str, history: list[dict]) -> str | None:
     match = USERNAME_PATTERN.search(text)
     if match:
         return f"{match.group(1)}{match.group(2)}"
+
+    custom_match = CUSTOM_USERNAME_PATTERN.search(text)
+    if custom_match:
+        candidate = custom_match.group(1).rstrip(".,!?;:")
+        if candidate.lower() not in {"my", "the", "this", "that", "password"}:
+            return candidate
 
     if client is None:
         return None
@@ -55,9 +65,10 @@ def _extract_username(text: str, history: list[dict]) -> str | None:
                     "role": "system",
                     "content": (
                         "You are a username extraction assistant for a school IT support system. "
-                        "Usernames follow the format: student{N}, teacher{N}, staff{N}, or admin{N} (e.g. student42, teacher3). "
+                        "Common usernames follow the format: student{N}, teacher{N}, staff{N}, or admin{N} (e.g. student42, teacher3), "
+                        "but the directory may also contain custom usernames such as GabyR. "
                         "Extract the username from the user's message if one is present or clearly implied. "
-                        "Handle variations like 'teacher number 5', 'the student with id 42', 'admin-1', 'student 12'. "
+                        "Handle variations like 'teacher number 5', 'the student with id 42', 'admin-1', 'student 12', or 'reset password for GabyR'. "
                         "Return null if no username can be confidently identified."
                     ),
                 },

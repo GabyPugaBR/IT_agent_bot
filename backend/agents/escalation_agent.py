@@ -15,6 +15,11 @@ from tools.mcp_client import (
 
 # Kept for deterministic slot-ID extraction — data format, not semantic reasoning
 SLOT_PATTERN = re.compile(r"\bslot-\d{3}\b", re.IGNORECASE)
+REQUEST_FORM_PATTERN = re.compile(r"Software/Hardware Request", re.IGNORECASE)
+REQUEST_KEYWORDS_PATTERN = re.compile(
+    r"\b(software|hardware|equipment|application|app|license|laptop|chromebook|computer|tablet|monitor|adobe|premiere)\b",
+    re.IGNORECASE,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -32,6 +37,22 @@ def _decide_escalation_action(user_input: str, history: list[dict], slot_match) 
             "action": "book_appointment",
             "confidence": 1.0,
             "reasoning": "Slot ID detected — booking deterministically.",
+            "is_request_submission": False,
+        }
+
+    if REQUEST_FORM_PATTERN.search(user_input):
+        return {
+            "action": "submit_request",
+            "confidence": 1.0,
+            "reasoning": "Structured software/hardware request form submission detected.",
+            "is_request_submission": True,
+        }
+
+    if REQUEST_KEYWORDS_PATTERN.search(user_input):
+        return {
+            "action": "show_request_form",
+            "confidence": 1.0,
+            "reasoning": "Software or hardware request detected — showing the form before ticket creation.",
             "is_request_submission": False,
         }
 

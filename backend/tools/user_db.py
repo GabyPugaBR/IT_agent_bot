@@ -155,7 +155,21 @@ def save_users(users: dict[str, dict]) -> None:
 
 def find_user(username: str) -> dict | None:
     users = load_users()
-    return users.get(username.lower())
+    normalized_username = username.strip().lower()
+    if not normalized_username:
+        return None
+
+    direct_match = users.get(normalized_username)
+    if direct_match:
+        return direct_match
+
+    for key, user in users.items():
+        if key.lower() == normalized_username:
+            return user
+        if str(user.get("username", "")).lower() == normalized_username:
+            return user
+
+    return None
 
 
 def get_password_policy(role: str) -> dict:

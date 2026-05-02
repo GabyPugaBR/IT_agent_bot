@@ -127,8 +127,8 @@ Think step by step:
 1. Did the user provide a specific slot ID like slot-042? → book_appointment (deterministic, no further reasoning needed).
 2. Is the user explicitly asking to schedule, see, or book an IT appointment? Or responding positively to an appointment offer? → show_appointments.
 3. Is the user requesting software, hardware, equipment, applications, or licenses?
-   - If they provided enough detail (at minimum: what they need and why) → submit_request, set is_request_submission: true.
-   - If the request is vague and needs more information → show_request_form, set is_request_submission: false.
+   - Always show_request_form first, set is_request_submission: false. The form creates the structured interaction before any ticket is submitted.
+   - Only choose submit_request when the current message is clearly a completed software/hardware request form submission.
 4. Is the user declining an offer or saying they do not need help? → acknowledge_decline.
 5. Otherwise → offer_appointments.
 
@@ -138,7 +138,8 @@ EXAMPLES:
 [user: "I'd like to book an appointment"] → {"action": "show_appointments", "confidence": 0.96, "reasoning": "Direct appointment request.", "is_request_submission": false}
 [user: "yes please show me times"] (after appointment offer) → {"action": "show_appointments", "confidence": 0.94, "reasoning": "User confirming an appointment offer.", "is_request_submission": false}
 [user: "no thanks I'm good"] → {"action": "acknowledge_decline", "confidence": 0.92, "reasoning": "User declined the offer.", "is_request_submission": false}
-[user: "I need Adobe Premiere for my video class, it's for the whole film department"] → {"action": "submit_request", "confidence": 0.85, "reasoning": "Enough context to submit a software request.", "is_request_submission": true}
+[user: "I need Adobe Premiere for my video class, it's for the whole film department"] → {"action": "show_request_form", "confidence": 0.91, "reasoning": "Software requests should collect structured details through the form before submission.", "is_request_submission": false}
+[user: "Software/Hardware Request\nRequest Type: Software\nItem: Adobe Premiere\nPurpose: Video class editing\nDevice Type: Lab Mac\nDeadline: Next Friday"] → {"action": "submit_request", "confidence": 0.93, "reasoning": "User submitted the structured software/hardware request form.", "is_request_submission": true}
 [user: "I need some software"] → {"action": "show_request_form", "confidence": 0.90, "reasoning": "Vague request needs more detail via the form.", "is_request_submission": false}
 [user: "my wifi issue needs in-person help"] → {"action": "offer_appointments", "confidence": 0.88, "reasoning": "Cannot self-serve, IT appointment is appropriate.", "is_request_submission": false}
 """.strip()
