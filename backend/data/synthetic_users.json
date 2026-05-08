@@ -1319,7 +1319,7 @@
     "must_change_password": false,
     "password": "UaNL1w&%^J7IDw"
   },
-  "IT director": {
+  "GabyR": {
     "username": "GabyR",
     "display_name": "IT Director",
     "role": "staff",
@@ -1327,8 +1327,8 @@
     "email": "itdirector@constellationsschool.org",
     "status": "active",
     "failed_attempts": 0,
-    "must_change_password": false,
-    "password": "3S7Gta!ilkhv5f"
+    "must_change_password": true,
+    "password": "&c$1q9XtM4g^%4"
   },
   "staff2": {
     "username": "staff2",

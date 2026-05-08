@@ -715,6 +715,10 @@
   gap: 0.5rem;
 }
 
+.appointment-request-grid {
+  margin-top: 0.8rem;
+}
+
 .request-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -753,6 +757,11 @@
   cursor: pointer;
 }
 
+.form-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .action-pill {
   padding: 0.48rem 0.72rem;
   border-radius: 999px;
@@ -761,6 +770,13 @@
   color: #16324f;
   cursor: pointer;
   font-size: 0.92rem;
+}
+
+.selected-action-pill {
+  border-color: rgba(14, 165, 233, 0.7);
+  background: rgba(14, 165, 233, 0.14);
+  color: #075985;
+  font-weight: 700;
 }
 
 .source-item {

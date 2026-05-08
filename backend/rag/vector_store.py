@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from pathlib import Path
 
 import faiss
@@ -9,24 +10,49 @@ from openai import OpenAI
 
 from agents.prompts import KNOWLEDGE_AGENT_PROMPT
 from rag.embeddings import get_embedding
-from rag.ingest import INDEX_PATH, METADATA_PATH, build_index, current_source_signature
+from rag.ingest import (
+    INDEX_PATH,
+    METADATA_PATH,
+    build_index,
+    current_source_signature,
+    load_source_payload,
+    source_content_signature,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
+REFRESH_INTERVAL_SECONDS = int(os.getenv("RAG_REFRESH_INTERVAL_SECONDS", "60"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 _STORE = None
 
 
-def load_store() -> dict:
+def _cache_is_fresh() -> bool:
+    if _STORE is None:
+        return False
+    loaded_at = _STORE.get("loaded_at", 0)
+    return time.time() - loaded_at < REFRESH_INTERVAL_SECONDS
+
+
+def _store_from_index(index, metadata_payload: dict) -> dict:
+    return {
+        "index": index,
+        "chunks": metadata_payload.get("chunks", []),
+        "source_content_signature": metadata_payload.get("source_content_signature"),
+        "loaded_at": time.time(),
+    }
+
+
+def load_store(force_refresh: bool = False) -> dict:
     global _STORE
-    if _STORE is not None:
+    if not force_refresh and _STORE is not None and _cache_is_fresh():
         return _STORE
 
-    if not INDEX_PATH.exists() or not METADATA_PATH.exists():
+    if force_refresh or not INDEX_PATH.exists() or not METADATA_PATH.exists():
         _STORE = build_index()
+        _STORE["loaded_at"] = time.time()
         return _STORE
 
     try:
@@ -34,22 +60,37 @@ def load_store() -> dict:
         metadata_payload = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
     except (RuntimeError, ValueError, json.JSONDecodeError):
         _STORE = build_index()
+        _STORE["loaded_at"] = time.time()
         return _STORE
 
     if isinstance(metadata_payload, list):
         _STORE = build_index()
+        _STORE["loaded_at"] = time.time()
         return _STORE
 
     if metadata_payload.get("source_signature") != current_source_signature():
         _STORE = build_index()
+        _STORE["loaded_at"] = time.time()
         return _STORE
 
-    chunks = metadata_payload.get("chunks", [])
-    _STORE = {
-        "index": index,
-        "chunks": chunks,
-    }
+    try:
+        source_payload = load_source_payload()
+        live_signature = source_content_signature(source_payload["pages"])
+    except RuntimeError:
+        _STORE = _store_from_index(index, metadata_payload)
+        return _STORE
+
+    if metadata_payload.get("source_content_signature") != live_signature:
+        _STORE = build_index(source_payload)
+        _STORE["loaded_at"] = time.time()
+        return _STORE
+
+    _STORE = _store_from_index(index, metadata_payload)
     return _STORE
+
+
+def rebuild_store() -> dict:
+    return load_store(force_refresh=True)
 
 
 def retrieve(query: str, top_k: int = 3) -> list[dict]:
@@ -83,7 +124,11 @@ def generate_grounded_answer(query: str, retrieved_docs: list[dict]) -> dict:
       - reasoning: one sentence about source coverage
     """
     context_blocks = [
-        f"Source: {doc['title']}\nContent: {doc['content']}"
+        (
+            f"Source: {doc['title']}\n"
+            f"Section: {doc.get('section_title', doc['title'])}\n"
+            f"Content: {doc['content']}"
+        )
         for doc in retrieved_docs
     ]
     context = "\n\n".join(context_blocks)
@@ -132,6 +177,9 @@ def search(query: str, top_k: int = 3) -> dict:
         "answer_confidence": result.get("answer_confidence", 0.0),
         "is_password_related": result.get("is_password_related", False),
         "reasoning": result.get("reasoning", ""),
-        "sources": [doc["title"] for doc in retrieved_docs],
+        "sources": [
+            f"{doc['title']} - {doc.get('section_title', doc['title'])}"
+            for doc in retrieved_docs
+        ],
         "documents": retrieved_docs,
     }

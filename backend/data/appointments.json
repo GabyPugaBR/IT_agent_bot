@@ -163,17 +163,17 @@
     "slot_id": "slot-021",
     "starts_at": "2026-05-11T09:00:00",
     "location": "IT Help Desk",
-    "status": "available",
-    "booked_for": null,
-    "issue_summary": null
+    "status": "booked",
+    "booked_for": "Anthony B",
+    "issue_summary": "cracked screen"
   },
   {
     "slot_id": "slot-022",
     "starts_at": "2026-05-11T11:00:00",
     "location": "IT Help Desk",
-    "status": "available",
-    "booked_for": null,
-    "issue_summary": null
+    "status": "booked",
+    "booked_for": "GabyR",
+    "issue_summary": "Book appointment slot-022 for my IT issue"
   },
   {
     "slot_id": "slot-023",

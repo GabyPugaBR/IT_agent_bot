@@ -35,7 +35,7 @@ def _extract_username(text: str, history: list[dict]) -> str | None:
     custom_match = CUSTOM_USERNAME_PATTERN.search(text)
     if custom_match:
         candidate = custom_match.group(1).rstrip(".,!?;:")
-        if candidate.lower() not in {"my", "the", "this", "that", "password"}:
+        if candidate.lower() not in {"my", "the", "this", "that", "password", "student", "teacher", "staff", "admin"}:
             return candidate
 
     if client is None:

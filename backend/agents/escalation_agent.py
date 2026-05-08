@@ -16,6 +16,7 @@ from tools.mcp_client import (
 # Kept for deterministic slot-ID extraction — data format, not semantic reasoning
 SLOT_PATTERN = re.compile(r"\bslot-\d{3}\b", re.IGNORECASE)
 REQUEST_FORM_PATTERN = re.compile(r"Software/Hardware Request", re.IGNORECASE)
+APPOINTMENT_FORM_PATTERN = re.compile(r"IT Appointment Request", re.IGNORECASE)
 REQUEST_KEYWORDS_PATTERN = re.compile(
     r"\b(software|hardware|equipment|application|app|license|laptop|chromebook|computer|tablet|monitor|adobe|premiere)\b",
     re.IGNORECASE,
@@ -27,16 +28,34 @@ ESCALATION_MODEL = os.getenv("OPENAI_ROUTER_MODEL", os.getenv("OPENAI_CHAT_MODEL
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
 
 
+def _extract_form_field(text: str, label: str) -> str | None:
+    pattern = re.compile(rf"^{re.escape(label)}:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+    match = pattern.search(text)
+    if not match:
+        return None
+    value = match.group(1).strip()
+    return value if value and value.lower() != "not specified" else None
+
+
+def _parse_appointment_request(text: str) -> dict:
+    slot_match = SLOT_PATTERN.search(text)
+    return {
+        "slot_id": slot_match.group(0).lower() if slot_match else None,
+        "name": _extract_form_field(text, "Name"),
+        "issue_summary": _extract_form_field(text, "Issue"),
+    }
+
+
 def _decide_escalation_action(user_input: str, history: list[dict], slot_match) -> dict:
     """
     Returns a dict with: action, confidence, reasoning, is_request_submission.
     Slot-ID match is deterministic; everything else goes to the LLM.
     """
-    if slot_match:
+    if APPOINTMENT_FORM_PATTERN.search(user_input) and slot_match:
         return {
             "action": "book_appointment",
             "confidence": 1.0,
-            "reasoning": "Slot ID detected — booking deterministically.",
+            "reasoning": "Structured appointment request detected — booking deterministically.",
             "is_request_submission": False,
         }
 
@@ -136,20 +155,30 @@ def escalation_agent(state):
     }
 
     if action == "book_appointment" and slot_match:
+        appointment_request = _parse_appointment_request(user_input)
+        booked_for = appointment_request.get("name") or username
+        issue_summary = appointment_request.get("issue_summary") or "IT appointment requested."
         booking = book_it_appointment_via_mcp(
-            slot_id=slot_match.group(0).lower(),
-            booked_for=username,
-            issue_summary=user_input,
+            slot_id=appointment_request.get("slot_id") or slot_match.group(0).lower(),
+            booked_for=booked_for,
+            issue_summary=issue_summary,
         )
         if booking.get("status") == "success":
+            appointment = booking.get("appointment")
+            ticket = create_support_ticket_via_mcp(
+                username=booked_for,
+                issue_summary=f"IT appointment scheduled: {issue_summary}",
+                urgency="normal",
+            )
             return {
                 **state,
                 "agent_used": "escalation",
                 "needs_escalation": True,
-                "response": "Your IT support appointment has been scheduled.",
+                "response": "Your IT support appointment has been scheduled and a confirmation ticket has been created.",
                 "metadata": {
                     **metadata,
-                    "appointment": booking.get("appointment"),
+                    "appointment": appointment,
+                    "ticket": ticket,
                     "escalation_options": ["View appointment", "Ask another question"],
                 },
             }

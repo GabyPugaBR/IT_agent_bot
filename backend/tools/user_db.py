@@ -153,23 +153,32 @@ def save_users(users: dict[str, dict]) -> None:
     USERS_PATH.write_text(json.dumps(users, indent=2), encoding="utf-8")
 
 
-def find_user(username: str) -> dict | None:
+def find_user_entry(username: str) -> tuple[str, dict] | None:
     users = load_users()
     normalized_username = username.strip().lower()
     if not normalized_username:
         return None
 
-    direct_match = users.get(normalized_username)
+    direct_match = users.get(username.strip())
     if direct_match:
-        return direct_match
+        return username.strip(), direct_match
+
+    lower_match = users.get(normalized_username)
+    if lower_match:
+        return normalized_username, lower_match
 
     for key, user in users.items():
         if key.lower() == normalized_username:
-            return user
+            return key, user
         if str(user.get("username", "")).lower() == normalized_username:
-            return user
+            return key, user
 
     return None
+
+
+def find_user(username: str) -> dict | None:
+    entry = find_user_entry(username)
+    return entry[1] if entry else None
 
 
 def get_password_policy(role: str) -> dict:

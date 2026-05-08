@@ -19,5 +19,19 @@
     "issue_summary": "My laptop issue needs human help",
     "urgency": "normal",
     "status": "open"
+  },
+  {
+    "ticket_id": "IT-0004",
+    "username": "GabyR",
+    "issue_summary": "Password reset tool returned an error.",
+    "urgency": "high",
+    "status": "open"
+  },
+  {
+    "ticket_id": "IT-0005",
+    "username": "Anthony B",
+    "issue_summary": "IT appointment scheduled: cracked screen",
+    "urgency": "normal",
+    "status": "open"
   }
 ]

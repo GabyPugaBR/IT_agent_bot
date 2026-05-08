@@ -8,6 +8,7 @@ from memory.store import (
     save_message,
     upsert_session_memory,
 )
+from rag.vector_store import rebuild_store
 from schemas.chat import ChatRequest, ChatResponse, ReasoningTrace
 
 app = FastAPI()
@@ -26,6 +27,16 @@ def health_check():
     return {
         "status": "ok",
         "service": "it-agent-bot",
+    }
+
+
+@app.post("/rag/rebuild")
+def rebuild_rag_index():
+    store = rebuild_store()
+    return {
+        "status": "ok",
+        "chunk_count": len(store.get("chunks", [])),
+        "source_content_signature": store.get("source_content_signature"),
     }
 
 

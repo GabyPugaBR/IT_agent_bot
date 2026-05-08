@@ -71,7 +71,7 @@ def _fetch_confluence_page(base_url: str, email: str, api_token: str, page_id: s
     request = Request(
         url=(
             f"{base_url}/wiki/rest/api/content/{page_id}"
-            "?expand=body.storage,title,space,_links"
+            "?expand=body.storage,title,space,version,history.lastUpdated,_links"
         ),
         headers={
             "Accept": "application/json",
@@ -86,11 +86,15 @@ def _fetch_confluence_page(base_url: str, email: str, api_token: str, page_id: s
     storage_html = payload.get("body", {}).get("storage", {}).get("value", "")
     page_base_url = payload.get("_links", {}).get("base") or f"{base_url}/wiki"
     webui_path = payload.get("_links", {}).get("webui", "")
+    version = payload.get("version", {})
+    last_updated = payload.get("history", {}).get("lastUpdated", {})
     return {
         "id": payload.get("id", page_id),
         "title": payload.get("title", f"Confluence Page {page_id}"),
         "space": payload.get("space", {}).get("name", "Confluence"),
         "url": f"{page_base_url}{webui_path}" if webui_path else None,
+        "version": version.get("number"),
+        "updated_at": version.get("when") or last_updated.get("when"),
         "content": _strip_confluence_storage_html(storage_html),
     }
 
@@ -172,7 +176,7 @@ def fetch_confluence_pages() -> dict:
             "status": "error",
             "message": (
                 "Live Confluence configuration is incomplete. "
-                "Set ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN, CONFLUENCE_BASE_URL, and CONFLUENCE_PAGE_IDS."
+                "Set ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN, CONFLUENCE_BASE_URL, and CONFLUENCE_PAGE_ID."
             ),
             "pages": [],
         }

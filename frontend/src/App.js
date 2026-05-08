@@ -10,7 +10,7 @@ const QUICK_ACTIONS = [
 
 const STARTER_PILLS = [
   "Reset my password",
-  "Wi-Fi or device help",
+  "Wi-Fi not working",
   "Schedule IT appointment"
 ];
 
@@ -32,6 +32,9 @@ function MessageCard({ message, onAction }) {
   const [purpose, setPurpose] = useState("");
   const [deviceType, setDeviceType] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [selectedSlotId, setSelectedSlotId] = useState("");
+  const [appointmentName, setAppointmentName] = useState("");
+  const [appointmentIssue, setAppointmentIssue] = useState("");
 
   const submitSoftwareRequest = () => {
     const formattedMessage = [
@@ -41,6 +44,20 @@ function MessageCard({ message, onAction }) {
       `Purpose: ${purpose || "Not specified"}`,
       `Device Type: ${deviceType || "Not specified"}`,
       `Deadline: ${deadline || "Not specified"}`,
+    ].join("\n");
+    onAction(formattedMessage);
+  };
+
+  const submitAppointmentRequest = () => {
+    if (!selectedSlotId || !appointmentName.trim() || !appointmentIssue.trim()) {
+      return;
+    }
+
+    const formattedMessage = [
+      "IT Appointment Request",
+      `Slot ID: ${selectedSlotId}`,
+      `Name: ${appointmentName.trim()}`,
+      `Issue: ${appointmentIssue.trim()}`,
     ].join("\n");
     onAction(formattedMessage);
   };
@@ -133,9 +150,17 @@ function MessageCard({ message, onAction }) {
               <p className="card-label">Location</p>
               <strong>{appointment.location}</strong>
             </div>
+            <div>
+              <p className="card-label">Name</p>
+              <strong>{appointment.booked_for || "Not specified"}</strong>
+            </div>
             <div className="card-span">
               <p className="card-label">Starts At</p>
               <strong>{new Date(appointment.starts_at).toLocaleString()}</strong>
+            </div>
+            <div className="card-span">
+              <p className="card-label">Issue</p>
+              <strong>{appointment.issue_summary || "Not specified"}</strong>
             </div>
           </div>
         </div>
@@ -151,13 +176,39 @@ function MessageCard({ message, onAction }) {
             {appointmentSlots.map((slot) => (
               <button
                 key={slot.slot_id}
-                className="action-pill"
-                onClick={() => onAction(`Book appointment ${slot.slot_id} for my IT issue`)}
+                className={`action-pill ${selectedSlotId === slot.slot_id ? "selected-action-pill" : ""}`}
+                onClick={() => setSelectedSlotId(slot.slot_id)}
               >
                 {slot.slot_id} · {new Date(slot.starts_at).toLocaleString()}
               </button>
             ))}
           </div>
+          <div className="request-form-grid appointment-request-grid">
+            <label>
+              <span className="card-label">Name</span>
+              <input
+                value={appointmentName}
+                onChange={(event) => setAppointmentName(event.target.value)}
+                placeholder="Example: Gaby Rollins"
+              />
+            </label>
+            <label className="request-form-span">
+              <span className="card-label">Issue</span>
+              <textarea
+                value={appointmentIssue}
+                onChange={(event) => setAppointmentIssue(event.target.value)}
+                rows={3}
+                placeholder="Briefly describe what you need help with."
+              />
+            </label>
+          </div>
+          <button
+            className="form-submit-button"
+            onClick={submitAppointmentRequest}
+            disabled={!selectedSlotId || !appointmentName.trim() || !appointmentIssue.trim()}
+          >
+            Schedule Appointment
+          </button>
         </div>
       )}
 
